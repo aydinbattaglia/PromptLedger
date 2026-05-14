@@ -4,13 +4,14 @@ import { mkdirSync, copyFileSync, existsSync, rmSync } from 'fs';
 const watch = process.argv.includes('--watch');
 
 if (existsSync('dist')) rmSync('dist', { recursive: true });
-for (const dir of ['dist', 'dist/popup', 'dist/dashboard', 'dist/background', 'dist/content', 'dist/inject', 'dist/plans']) {
+for (const dir of ['dist', 'dist/popup', 'dist/dashboard', 'dist/background', 'dist/content', 'dist/inject', 'dist/plans', 'dist/onboarding']) {
   mkdirSync(dir, { recursive: true });
 }
 
 copyFileSync('manifest.json', 'dist/manifest.json');
 copyFileSync('src/popup/popup.html', 'dist/popup/popup.html');
 copyFileSync('src/dashboard/dashboard.html', 'dist/dashboard/dashboard.html');
+copyFileSync('src/onboarding/onboarding.html', 'dist/onboarding/onboarding.html');
 
 const swConfig = {
   entryPoints: [{ in: 'src/background/service-worker.ts', out: 'background/service-worker' }],
@@ -29,6 +30,7 @@ const pagesConfig = {
     { in: 'src/popup/popup.ts', out: 'popup/popup' },
     { in: 'src/dashboard/dashboard.ts', out: 'dashboard/dashboard' },
     { in: 'src/plans/detector.ts', out: 'plans/detector' },
+    { in: 'src/onboarding/onboarding.ts', out: 'onboarding/onboarding' },
   ],
   bundle: true,
   outdir: 'dist',

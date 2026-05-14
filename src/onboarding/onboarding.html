@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome to PromptLedger</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      background: #f4f4f8;
+      color: #1c1c2e;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 24px 64px;
+    }
+
+    .wrap {
+      width: 100%;
+      max-width: 680px;
+    }
+
+    /* ── Header ── */
+    .logo {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1c1c2e;
+      letter-spacing: -0.02em;
+      margin-bottom: 40px;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      margin-bottom: 44px;
+    }
+
+    .hero h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: #1c1c2e;
+      line-height: 1.2;
+      margin-bottom: 12px;
+    }
+
+    .hero p {
+      font-size: 15px;
+      color: #5c5c78;
+      line-height: 1.6;
+      max-width: 520px;
+    }
+
+    /* ── How it works ── */
+    .how-it-works {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 44px;
+    }
+
+    .step {
+      flex: 1;
+      background: #fff;
+      border: 1px solid #dcdce8;
+      border-radius: 10px;
+      padding: 16px;
+    }
+
+    .step-num {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #4f4fd4;
+      margin-bottom: 6px;
+    }
+
+    .step-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1c1c2e;
+      margin-bottom: 4px;
+    }
+
+    .step-desc {
+      font-size: 12px;
+      color: #7070900;
+      color: #6868888;
+      line-height: 1.5;
+    }
+
+    /* ── Tools section ── */
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #808098;
+      margin-bottom: 12px;
+    }
+
+    .tool-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 44px;
+    }
+
+    .tool-card {
+      background: #fff;
+      border: 1px solid #dcdce8;
+      border-radius: 10px;
+      padding: 16px 20px;
+    }
+
+    .tool-card-top {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .tool-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1c1c2e;
+      text-transform: capitalize;
+      flex: 1;
+    }
+
+    .status-badge {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 3px 9px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+    .status-badge.unset {
+      background: #f0f0f6;
+      color: #808098;
+    }
+    .status-badge.detected {
+      background: #e6f5ec;
+      color: #1a7a38;
+    }
+    .status-badge.custom {
+      background: #eeeeff;
+      color: #4040c0;
+    }
+
+    .billing-link {
+      font-size: 12px;
+      color: #4f4fd4;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .billing-link:hover { text-decoration: underline; }
+
+    .manual-toggle {
+      font-size: 12px;
+      background: none;
+      border: none;
+      color: #808098;
+      cursor: pointer;
+      padding: 0;
+      margin-top: 10px;
+      display: block;
+    }
+    .manual-toggle:hover { color: #4f4fd4; }
+
+    .manual-form {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #eeeef6;
+    }
+    .manual-form.visible { display: flex; }
+
+    .manual-form input {
+      width: 90px;
+      background: #f4f4f8;
+      border: 1px solid #c8c8dc;
+      border-radius: 5px;
+      color: #1c1c2e;
+      font-size: 12px;
+      padding: 5px 8px;
+      outline: none;
+    }
+    .manual-form input:focus { border-color: #4f4fd4; }
+
+    .manual-unit {
+      font-size: 11px;
+      color: #808098;
+      flex: 1;
+    }
+
+    .save-btn {
+      font-size: 12px;
+      padding: 5px 12px;
+      border-radius: 5px;
+      border: 1px solid #4f4fd4;
+      background: transparent;
+      color: #4f4fd4;
+      cursor: pointer;
+    }
+    .save-btn:hover { background: #4f4fd4; color: #fff; }
+
+    /* ── CTA ── */
+    .cta {
+      text-align: center;
+      padding: 32px;
+      background: #fff;
+      border: 1px solid #dcdce8;
+      border-radius: 12px;
+    }
+
+    .cta-ready {
+      font-size: 13px;
+      color: #808098;
+      margin-bottom: 16px;
+      line-height: 1.6;
+    }
+
+    .cta-ready.has-plan {
+      color: #1a7a38;
+    }
+
+    .dashboard-btn {
+      display: inline-block;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 10px 28px;
+      border-radius: 7px;
+      border: none;
+      background: #4f4fd4;
+      color: #fff;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+    .dashboard-btn:hover { background: #3a3ab8; }
+
+    .skip-link {
+      display: block;
+      margin-top: 12px;
+      font-size: 12px;
+      color: #808098;
+      cursor: pointer;
+      background: none;
+      border: none;
+      text-decoration: underline;
+    }
+    .skip-link:hover { color: #4f4fd4; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="logo">PromptLedger</div>
+
+    <div class="hero">
+      <h1>Know what every generation costs.</h1>
+      <p>PromptLedger runs quietly in the background and logs the credits and dollars used by each Runway, Midjourney, and ElevenLabs generation — automatically.</p>
+    </div>
+
+    <div class="how-it-works">
+      <div class="step">
+        <div class="step-num">Step 1</div>
+        <div class="step-title">Set up your plans</div>
+        <div class="step-desc">Visit your billing page on each tool — PromptLedger will detect your plan automatically.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">Step 2</div>
+        <div class="step-title">Generate as normal</div>
+        <div class="step-desc">Every generation is logged in the background. No changes to your workflow.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">Step 3</div>
+        <div class="step-title">Review your usage</div>
+        <div class="step-desc">Open the dashboard to see spend over time, filter by tool, and export your data.</div>
+      </div>
+    </div>
+
+    <div class="section-label">Set up your tools</div>
+    <div class="tool-cards" id="tool-cards">
+      <!-- Populated by onboarding.ts -->
+    </div>
+
+    <div class="cta">
+      <p class="cta-ready" id="cta-status">
+        Set up at least one tool above to start tracking — or skip for now and configure from the popup.
+      </p>
+      <button class="dashboard-btn" id="dashboard-btn">Open Dashboard</button>
+      <button class="skip-link" id="skip-btn">Skip setup for now</button>
+    </div>
+  </div>
+
+  <script src="onboarding.js"></script>
+</body>
+</html>

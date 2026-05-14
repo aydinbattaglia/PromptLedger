@@ -19,6 +19,12 @@ const TOOL_CREDIT_CAPS: Record<string, number> = {
   udio: 2_500,
 };
 
+chrome.runtime.onInstalled.addListener((details) => {
+  if (details.reason === 'install') {
+    void chrome.tabs.create({ url: chrome.runtime.getURL('onboarding/onboarding.html') });
+  }
+});
+
 chrome.runtime.onMessage.addListener(
   (message: ExtensionMessage, _sender, sendResponse) => {
     handleMessage(message)
