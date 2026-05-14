@@ -494,6 +494,9 @@ document.querySelectorAll('.range-btn').forEach((btn) => {
 });
 
 document.getElementById('theme-btn')!.addEventListener('click', toggleTheme);
+document.getElementById('help-btn')!.addEventListener('click', () => {
+  chrome.tabs.create({ url: chrome.runtime.getURL('help/help.html') });
+});
 document.getElementById('export-btn')!.addEventListener('click', exportCSV);
 document.getElementById('clear-btn')!.addEventListener('click', () => void handleClearAll());
 

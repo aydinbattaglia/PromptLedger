@@ -4,7 +4,7 @@ import { mkdirSync, copyFileSync, existsSync, rmSync } from 'fs';
 const watch = process.argv.includes('--watch');
 
 if (existsSync('dist')) rmSync('dist', { recursive: true });
-for (const dir of ['dist', 'dist/popup', 'dist/dashboard', 'dist/background', 'dist/content', 'dist/inject', 'dist/plans', 'dist/onboarding']) {
+for (const dir of ['dist', 'dist/popup', 'dist/dashboard', 'dist/background', 'dist/content', 'dist/inject', 'dist/plans', 'dist/onboarding', 'dist/help']) {
   mkdirSync(dir, { recursive: true });
 }
 
@@ -12,6 +12,7 @@ copyFileSync('manifest.json', 'dist/manifest.json');
 copyFileSync('src/popup/popup.html', 'dist/popup/popup.html');
 copyFileSync('src/dashboard/dashboard.html', 'dist/dashboard/dashboard.html');
 copyFileSync('src/onboarding/onboarding.html', 'dist/onboarding/onboarding.html');
+copyFileSync('src/help/help.html', 'dist/help/help.html');
 
 const swConfig = {
   entryPoints: [{ in: 'src/background/service-worker.ts', out: 'background/service-worker' }],

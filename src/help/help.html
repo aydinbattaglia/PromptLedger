@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PromptLedger — How it works</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      line-height: 1.7;
+      background: #f4f4f8;
+      color: #1c1c2e;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 24px 80px;
+    }
+
+    .wrap {
+      width: 100%;
+      max-width: 700px;
+    }
+
+    /* ── Nav ── */
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 44px;
+    }
+
+    .logo {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1c1c2e;
+      letter-spacing: -0.02em;
+    }
+
+    .back-link {
+      font-size: 12px;
+      color: #4f4fd4;
+      text-decoration: none;
+      cursor: pointer;
+      background: none;
+      border: none;
+    }
+    .back-link:hover { text-decoration: underline; }
+
+    /* ── Hero ── */
+    .page-title {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: #1c1c2e;
+      margin-bottom: 8px;
+    }
+
+    .page-sub {
+      font-size: 15px;
+      color: #5c5c78;
+      margin-bottom: 48px;
+    }
+
+    /* ── Sections ── */
+    .section {
+      margin-bottom: 44px;
+    }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #4f4fd4;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #dcdce8;
+    }
+
+    h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1c1c2e;
+      margin: 20px 0 6px;
+    }
+    h3:first-child { margin-top: 0; }
+
+    p {
+      color: #4c4c68;
+      margin-bottom: 10px;
+    }
+    p:last-child { margin-bottom: 0; }
+
+    /* ── Field table ── */
+    .field-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 4px;
+    }
+
+    .field-table th {
+      text-align: left;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #808098;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-bottom: 1px solid #dcdce8;
+    }
+
+    .field-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #eeeef6;
+      vertical-align: top;
+      font-size: 13px;
+    }
+    .field-table tr:last-child td { border-bottom: none; }
+
+    .field-table td:first-child {
+      font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+      font-size: 12px;
+      color: #4f4fd4;
+      white-space: nowrap;
+      width: 140px;
+    }
+
+    .field-table td:last-child {
+      color: #4c4c68;
+    }
+
+    .field-table tbody tr:hover td { background: #f0f0f8; }
+
+    /* ── Callout boxes ── */
+    .callout {
+      border-radius: 8px;
+      padding: 16px 18px;
+      margin: 12px 0;
+      font-size: 13px;
+    }
+
+    .callout-orange {
+      background: #fff5ee;
+      border-left: 3px solid #b84800;
+    }
+    .callout-orange strong { color: #b84800; }
+
+    .callout-blue {
+      background: #eeeefd;
+      border-left: 3px solid #4f4fd4;
+    }
+    .callout-blue strong { color: #4f4fd4; }
+
+    .callout-green {
+      background: #eefaf3;
+      border-left: 3px solid #1a7a38;
+    }
+    .callout-green strong { color: #1a7a38; }
+
+    .callout p { color: inherit; margin: 0; }
+
+    /* ── Steps ── */
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 4px;
+    }
+
+    .step {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+
+    .step-num {
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #4f4fd4;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 1px;
+    }
+
+    .step-body strong {
+      display: block;
+      font-size: 14px;
+      color: #1c1c2e;
+      margin-bottom: 2px;
+    }
+
+    .step-body span {
+      font-size: 13px;
+      color: #5c5c78;
+    }
+
+    /* ── Inline code ── */
+    code {
+      font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+      font-size: 12px;
+      background: #eeeef6;
+      color: #4f4fd4;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+
+    /* ── Badge previews ── */
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 10px 0;
+      align-items: center;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+    .badge-flagged { background: rgba(184,72,0,0.12); color: #b84800; }
+    .badge-project { background: rgba(79,79,212,0.1); color: #4f4fd4; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <div class="nav">
+      <span class="logo">PromptLedger</span>
+      <button class="back-link" onclick="history.back()">← Back to dashboard</button>
+    </div>
+
+    <h1 class="page-title">How PromptLedger works</h1>
+    <p class="page-sub">A reference guide to every feature, field, and status indicator.</p>
+
+    <!-- ── Getting started ── -->
+    <div class="section">
+      <div class="section-title">Getting started</div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Visit your billing page on each tool</strong>
+            <span>PromptLedger's plan detector runs automatically on Runway, Midjourney, and ElevenLabs billing pages and saves your credit rate. You can also set a rate manually from the popup.</span>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Generate as normal</strong>
+            <span>The extension intercepts network traffic in the background. Every time a generation completes, it records the credit delta, converts it to a dollar cost using your plan rate, and stores it locally.</span>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Review your usage in the dashboard</strong>
+            <span>Open the popup and click "Open full dashboard" to see your spend over time, filter by tool or project, export to CSV, or delete individual records.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── How costs are calculated ── -->
+    <div class="section">
+      <div class="section-title">How costs are calculated</div>
+      <h3>Plan rate</h3>
+      <p>Each tool prices credits differently. PromptLedger stores a <strong>plan rate</strong> — the number of credits (or characters, or GPU-hours) you get per dollar — and uses it to convert credit deltas into a dollar cost:</p>
+      <p><code>cost = credits_used ÷ plan_rate</code></p>
+      <p>Rates are detected automatically from your billing page or set manually in the popup. You can override a detected rate at any time.</p>
+
+      <h3>Credit delta</h3>
+      <p>When a generation starts, the extension reads your current balance. When it completes, it reads your balance again. The difference is <code>credits_used</code>. This works across all three tools even though they use different balance formats (Runway: credits, Midjourney: GPU hours, ElevenLabs: characters).</p>
+    </div>
+
+    <!-- ── Log table fields ── -->
+    <div class="section">
+      <div class="section-title">Log table fields</div>
+      <table class="field-table">
+        <thead>
+          <tr>
+            <th>Field</th>
+            <th>What it means</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Time</td>
+            <td>When the generation <em>started</em>, in your local timezone.</td>
+          </tr>
+          <tr>
+            <td>Tool</td>
+            <td>Which service was used: <code>runway</code>, <code>midjourney</code>, or <code>elevenlabs</code>.</td>
+          </tr>
+          <tr>
+            <td>Model</td>
+            <td>The specific model or plan tier detected from the request, e.g. <code>gen3a_turbo</code>. May show <code>unknown</code> if the model couldn't be parsed from the request.</td>
+          </tr>
+          <tr>
+            <td>Prompt</td>
+            <td>The text prompt sent with the generation, if it was present in the intercepted request. Shows <code>—</code> if not captured.</td>
+          </tr>
+          <tr>
+            <td>Project</td>
+            <td>A project tag you assign to group related generations. Can be set before generating (via the popup) or retroactively using the dropdown in this column.</td>
+          </tr>
+          <tr>
+            <td>Credits</td>
+            <td>The number of credits, characters, or GPU-hours consumed. Shows <code>—</code> if the record is flagged.</td>
+          </tr>
+          <tr>
+            <td>Cost</td>
+            <td>Dollar cost, calculated as <code>credits ÷ plan_rate</code>. Shows <code>—</code> if flagged or if no plan rate is set.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── Flagged records ── -->
+    <div class="section">
+      <div class="section-title">Flagged records</div>
+
+      <div class="badge-row">
+        <span class="badge badge-flagged">flagged</span>
+      </div>
+
+      <p>A record is flagged when the extension cannot trust the cost reading. Flagged records have <code>credits_used: null</code> and <code>cost_usd: null</code> — they appear in the log but are excluded from totals and charts.</p>
+
+      <h3>Reason 1 — Generation timed out</h3>
+      <p>If no completion signal arrives within the timeout window (5 minutes for Runway, 3 minutes for Midjourney, 1 minute for ElevenLabs), the record is saved as flagged. The generation may have completed but the balance change couldn't be captured in time.</p>
+
+      <h3>Reason 2 — Delta failed validation</h3>
+      <p>When a completion does arrive, two checks run:</p>
+      <div class="callout callout-orange">
+        <p><strong>Hard cap:</strong> The delta exceeds an absolute ceiling per tool (2,500 credits for Runway, 60 GPU-hours for Midjourney, 100,000 characters for ElevenLabs). Anything above these values is almost certainly a bad reading from a page refresh or balance resync.</p>
+      </div>
+      <div class="callout callout-orange">
+        <p><strong>5× EMA rule:</strong> The delta is more than 5× your exponential moving average for that tool (weighted toward recent generations, α = 0.3). This catches anomalous spikes relative to your normal usage patterns.</p>
+      </div>
+      <p>If either check fails, the delta is discarded and the record is flagged. The EMA updates only from valid (unflagged) generations, so a false positive won't skew future estimates.</p>
+
+      <div class="callout callout-blue">
+        <p><strong>Tip:</strong> A high flagged count usually means your plan rate isn't set or is stale. Visit your billing page to let the detector refresh it, or set the rate manually in the popup.</p>
+      </div>
+    </div>
+
+    <!-- ── Project tags ── -->
+    <div class="section">
+      <div class="section-title">Project tags</div>
+
+      <div class="badge-row">
+        <span class="badge badge-project">my-campaign</span>
+      </div>
+
+      <p>Project tags let you group generations by campaign, client, or workflow and see their cost breakdown separately.</p>
+
+      <h3>Setting a tag before you generate</h3>
+      <p>Open the popup and select a project from the "Active project" dropdown (or create one with the <code>+</code> button). All subsequent generations are tagged with that project until you change it or set it back to "None".</p>
+
+      <h3>Tagging existing records</h3>
+      <p>In the dashboard log table, each row has a Project dropdown. Select a project (or "None") to update that record immediately — no save button needed.</p>
+
+      <h3>Filtering by project</h3>
+      <p>Use the "Project" filter dropdown in the dashboard filter bar to show only records belonging to a specific project. The dropdown auto-applies when changed.</p>
+    </div>
+
+    <!-- ── Dashboard features ── -->
+    <div class="section">
+      <div class="section-title">Dashboard features</div>
+
+      <h3>Summary cards</h3>
+      <p>Total cost, total credits, generation count, and flagged count — all scoped to your current filters.</p>
+
+      <h3>Daily spend chart</h3>
+      <p>A line chart of dollar spend per day. Toggle between 30-day and 90-day views using the buttons in the chart header. The range always ends today and counts back from there.</p>
+
+      <h3>By-tool doughnut</h3>
+      <p>Shows spend proportion across tools for the current filter selection. Displays a grey placeholder when there is no cost data.</p>
+
+      <h3>Filters</h3>
+      <p>Tool and Project filters apply immediately on change. Date range and prompt search require clicking Apply (to avoid filtering on partial input). The Clear button resets all filters at once.</p>
+
+      <h3>CSV export</h3>
+      <p>Exports all currently filtered records (not just the current page) as a CSV file. The filename includes today's date: <code>promptledger-export-YYYY-MM-DD.csv</code>. All schema fields are included.</p>
+
+      <h3>Delete and Clear all</h3>
+      <p>The <code>✕</code> button on each row deletes that record permanently from IndexedDB. "Clear all" in the header deletes every record after a confirmation prompt. Both actions are irreversible — export first if you need to keep the data.</p>
+
+      <div class="callout callout-green">
+        <p><strong>Privacy:</strong> All data is stored locally in your browser's IndexedDB. Nothing is sent to any server. The extension only has access to the three domains listed in its permissions.</p>
+      </div>
+    </div>
+
+    <!-- ── Pause ── -->
+    <div class="section">
+      <div class="section-title">Pausing tracking</div>
+      <p>The "Pause" button in the popup header stops all capture. Generations made while paused are not logged. Click "Resume" to start recording again. The paused state persists across browser restarts.</p>
+    </div>
+
+  </div>
+</body>
+</html>
