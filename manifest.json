@@ -7,12 +7,14 @@
     "storage",
     "tabs",
     "activeTab",
-    "notifications"
+    "notifications",
+    "alarms"
   ],
   "host_permissions": [
     "*://*.runwayml.com/*",
     "*://*.midjourney.com/*",
-    "*://*.elevenlabs.io/*"
+    "*://*.elevenlabs.io/*",
+    "https://api.frankfurter.app/*"
   ],
   "background": {
     "service_worker": "background/service-worker.js",

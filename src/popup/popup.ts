@@ -1,12 +1,22 @@
 import { getStats } from '../storage/idb.js';
 import { BILLING_URLS } from '../plans/data.js';
+import { type CurrencyCode, formatCostSummary } from '../util/currency.js';
 
 const TOOLS = ['runway', 'elevenlabs', 'midjourney'] as const;
 type Tool = typeof TOOLS[number];
 
+let displayCurrency: CurrencyCode = 'USD';
+let exchangeRates: Record<string, number> = { USD: 1 };
+
 async function init(): Promise<void> {
   wireProjectEvents();
-  await Promise.all([renderStats(), renderPlans(), renderProjects(), wirePause(), wireDashboard()]);
+  await Promise.all([loadCurrencySettings(), renderStats(), renderPlans(), renderProjects(), wirePause(), wireDashboard()]);
+}
+
+async function loadCurrencySettings(): Promise<void> {
+  const stored = await storageGet(['display_currency', 'exchange_rates']);
+  displayCurrency = ((stored['display_currency'] as string | undefined) ?? 'USD') as CurrencyCode;
+  exchangeRates = (stored['exchange_rates'] as Record<string, number> | undefined) ?? { USD: 1 };
 }
 
 // ── Stats ────────────────────────────────────────────────────────────────────
@@ -16,7 +26,7 @@ async function renderStats(): Promise<void> {
 
   setText('credits-today', String(Math.round(stats.credits_today)));
   setText('credits-week', String(Math.round(stats.credits_week)));
-  setText('cost-month', `$${stats.cost_month_usd.toFixed(2)}`);
+  setText('cost-month', formatCostSummary(stats.cost_month_usd, displayCurrency, exchangeRates));
 
   const byToolEl = document.getElementById('by-tool')!;
   const tools = Object.entries(stats.by_tool);
@@ -30,7 +40,7 @@ async function renderStats(): Promise<void> {
   for (const [tool, data] of tools) {
     const row = document.createElement('div');
     row.className = 'tool-row';
-    row.innerHTML = `<span class="tool-name">${tool}</span><span class="tool-cost">$${data.cost_usd.toFixed(2)}</span>`;
+    row.innerHTML = `<span class="tool-name">${tool}</span><span class="tool-cost">${formatCostSummary(data.cost_usd, displayCurrency, exchangeRates)}</span>`;
     byToolEl.appendChild(row);
   }
 }

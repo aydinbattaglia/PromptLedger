@@ -14,6 +14,10 @@ import {
 
 import { getRecords, saveRecord, deleteRecord, clearAll } from '../storage/idb.js';
 import type { GenerationRecord, RecordFilters, ToolId } from '../types/index.js';
+import {
+  CURRENCIES, CURRENCY_META, type CurrencyCode,
+  convertUsd, formatCostSummary, formatCostDetail,
+} from '../util/currency.js';
 
 Chart.register(
   CategoryScale, LinearScale, LineElement, PointElement, LineController,
@@ -34,6 +38,8 @@ const TOOL_COLORS: Record<string, string> = {
 let allRecords: GenerationRecord[] = [];
 let filteredRecords: GenerationRecord[] = [];
 let projectList: string[] = [];
+let displayCurrency: CurrencyCode = 'USD';
+let exchangeRates: Record<string, number> = { USD: 1 };
 let currentPage = 0;
 let chartDays = 30;
 let timeseriesChart: Chart | null = null;
@@ -80,9 +86,29 @@ async function load(): Promise<void> {
   const [records] = await Promise.all([
     getRecords(),
     loadProjectFilter(),
+    loadCurrencySettings(),
   ]);
   allRecords = records;
   filteredRecords = allRecords;
+  renderAll();
+}
+
+async function loadCurrencySettings(): Promise<void> {
+  const stored = await new Promise<Record<string, unknown>>((resolve) =>
+    chrome.storage.local.get(['display_currency', 'exchange_rates'], resolve),
+  );
+  displayCurrency = ((stored['display_currency'] as string | undefined) ?? 'USD') as CurrencyCode;
+  exchangeRates = (stored['exchange_rates'] as Record<string, number> | undefined) ?? { USD: 1 };
+  (document.getElementById('currency-select') as HTMLSelectElement).value = displayCurrency;
+}
+
+async function setCurrency(code: CurrencyCode): Promise<void> {
+  displayCurrency = code;
+  await new Promise<void>((resolve) =>
+    chrome.storage.local.set({ display_currency: code }, resolve),
+  );
+  if (timeseriesChart) { timeseriesChart.destroy(); timeseriesChart = null; }
+  if (donutChart) { donutChart.destroy(); donutChart = null; }
   renderAll();
 }
 
@@ -115,7 +141,7 @@ function renderSummary(): void {
   const totalCredits = records.reduce((s, r) => s + (r.credits_used ?? 0), 0);
   const flagged = records.filter((r) => r.flagged).length;
 
-  setText('sum-cost', `$${totalCost.toFixed(2)}`);
+  setText('sum-cost', formatCostSummary(totalCost, displayCurrency, exchangeRates));
   setText('sum-credits', Math.round(totalCredits).toLocaleString());
   setText('sum-count', records.length.toLocaleString());
   setText('sum-flagged', String(flagged));
@@ -144,7 +170,8 @@ function renderTimeseries(): void {
     const [, m, day] = d.split('-') as [string, string, string];
     return `${m}/${day}`;
   });
-  const data = [...buckets.values()];
+  const meta = CURRENCY_META[displayCurrency];
+  const data = [...buckets.values()].map((usd) => convertUsd(usd, displayCurrency, exchangeRates));
 
   if (timeseriesChart) {
     timeseriesChart.data.labels = labels;
@@ -174,11 +201,11 @@ function renderTimeseries(): void {
       responsive: true,
       maintainAspectRatio: false,
       plugins: { legend: { display: false }, tooltip: {
-        callbacks: { label: (ctx) => ` $${(ctx.raw as number).toFixed(2)}` },
+        callbacks: { label: (ctx) => ` ${meta.symbol}${(ctx.raw as number).toFixed(meta.decimals)}` },
       } },
       scales: {
         x: { ticks: { color: tickColor, font: { size: 10 }, maxTicksLimit: 8 }, grid: { color: gridColor } },
-        y: { ticks: { color: tickColor, font: { size: 10 }, callback: (v) => `$${Number(v).toFixed(2)}` }, grid: { color: gridColor }, beginAtZero: true },
+        y: { ticks: { color: tickColor, font: { size: 10 }, callback: (v) => `${meta.symbol}${Number(v).toFixed(meta.decimals)}` }, grid: { color: gridColor }, beginAtZero: true },
       },
     },
   });
@@ -192,7 +219,7 @@ function renderDonut(): void {
   const byTool = new Map<string, number>();
   for (const r of filteredRecords) {
     const cost = r.cost_usd ?? 0;
-    if (cost > 0) byTool.set(r.tool, (byTool.get(r.tool) ?? 0) + cost);
+    if (cost > 0) byTool.set(r.tool, (byTool.get(r.tool) ?? 0) + convertUsd(cost, displayCurrency, exchangeRates));
   }
 
   const labels = byTool.size > 0 ? [...byTool.keys()] : ['No data'];
@@ -232,7 +259,8 @@ function renderDonut(): void {
               const val = ctx.raw as number;
               const total = (ctx.dataset.data as number[]).reduce((a, b) => a + b, 0);
               const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0';
-              return ` $${val.toFixed(2)} (${pct}%)`;
+              const m = CURRENCY_META[displayCurrency];
+              return ` ${m.symbol}${val.toFixed(m.decimals)} (${pct}%)`;
             },
           },
         },
@@ -296,7 +324,7 @@ function renderTable(): void {
       <td class="prompt-cell" title="${escHtml(r.prompt ?? '')}">${escHtml(r.prompt ?? '—')}</td>
       <td class="proj-cell"></td>
       <td class="num">${r.credits_used !== null ? Math.round(r.credits_used).toLocaleString() : '—'}</td>
-      <td class="cost">${r.cost_usd !== null ? `$${r.cost_usd.toFixed(4)}` : '—'}</td>
+      <td class="cost">${r.cost_usd !== null ? formatCostDetail(r.cost_usd, displayCurrency, exchangeRates) : '—'}</td>
       <td class="actions"><button class="del-btn" title="Delete">✕</button></td>`;
 
     // Build project dropdown
@@ -494,6 +522,9 @@ document.querySelectorAll('.range-btn').forEach((btn) => {
 });
 
 document.getElementById('theme-btn')!.addEventListener('click', toggleTheme);
+document.getElementById('currency-select')!.addEventListener('change', (e) => {
+  void setCurrency((e.target as HTMLSelectElement).value as CurrencyCode);
+});
 document.getElementById('help-btn')!.addEventListener('click', () => {
   chrome.tabs.create({ url: chrome.runtime.getURL('help/help.html') });
 });

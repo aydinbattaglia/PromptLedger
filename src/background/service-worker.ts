@@ -19,11 +19,34 @@ const TOOL_CREDIT_CAPS: Record<string, number> = {
   udio: 2_500,
 };
 
+const RATE_CURRENCIES = ['EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'INR', 'MXN'];
+
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') {
     void chrome.tabs.create({ url: chrome.runtime.getURL('onboarding/onboarding.html') });
   }
+  void fetchExchangeRates();
+  chrome.alarms.create('refresh-rates', { periodInMinutes: 1440 });
 });
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === 'refresh-rates') void fetchExchangeRates();
+});
+
+async function fetchExchangeRates(): Promise<void> {
+  try {
+    const symbols = RATE_CURRENCIES.join(',');
+    const res = await fetch(`https://api.frankfurter.app/latest?from=USD&to=${symbols}`);
+    if (!res.ok) return;
+    const data = await res.json() as { rates: Record<string, number> };
+    const rates: Record<string, number> = { USD: 1, ...data.rates };
+    await new Promise<void>((resolve) =>
+      chrome.storage.local.set({ exchange_rates: rates, exchange_rates_updated: new Date().toISOString() }, resolve),
+    );
+  } catch {
+    // Keep stale rates on failure
+  }
+}
 
 chrome.runtime.onMessage.addListener(
   (message: ExtensionMessage, _sender, sendResponse) => {
