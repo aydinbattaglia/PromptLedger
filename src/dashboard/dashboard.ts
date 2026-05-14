@@ -374,31 +374,31 @@ async function handleClearAll(): Promise<void> {
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
 
-function isLight(): boolean {
-  return document.documentElement.dataset['theme'] === 'light';
+function isDark(): boolean {
+  return document.documentElement.dataset['theme'] === 'dark';
 }
 
 function chartColor(dark: string, light: string): string {
-  return isLight() ? light : dark;
+  return isDark() ? dark : light;
 }
 
 function initTheme(): void {
-  if (localStorage.getItem('pl-theme') === 'light') {
-    document.documentElement.dataset['theme'] = 'light';
-    (document.getElementById('theme-btn') as HTMLButtonElement).textContent = 'Dark mode';
+  if (localStorage.getItem('pl-theme') === 'dark') {
+    document.documentElement.dataset['theme'] = 'dark';
+    (document.getElementById('theme-btn') as HTMLButtonElement).textContent = 'Light mode';
   }
 }
 
 function toggleTheme(): void {
-  const toLight = !isLight();
-  if (toLight) {
-    document.documentElement.dataset['theme'] = 'light';
-    localStorage.setItem('pl-theme', 'light');
-    (document.getElementById('theme-btn') as HTMLButtonElement).textContent = 'Dark mode';
-  } else {
-    delete document.documentElement.dataset['theme'];
+  const toDark = !isDark();
+  if (toDark) {
+    document.documentElement.dataset['theme'] = 'dark';
     localStorage.setItem('pl-theme', 'dark');
     (document.getElementById('theme-btn') as HTMLButtonElement).textContent = 'Light mode';
+  } else {
+    delete document.documentElement.dataset['theme'];
+    localStorage.setItem('pl-theme', 'light');
+    (document.getElementById('theme-btn') as HTMLButtonElement).textContent = 'Dark mode';
   }
   if (timeseriesChart) { timeseriesChart.destroy(); timeseriesChart = null; }
   if (donutChart) { donutChart.destroy(); donutChart = null; }

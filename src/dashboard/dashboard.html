@@ -9,6 +9,27 @@
 
     /* ── Theme variables ── */
     :root {
+      --bg:           #f4f4f8;
+      --surface:      #ffffff;
+      --raised:       #ebebf2;
+      --border:       #dcdce8;
+      --border-sub:   #e8e8f2;
+      --text:         #1c1c2e;
+      --text-2:       #4c4c68;
+      --text-3:       #808098;
+      --text-4:       #686888;
+      --white:        #1c1c2e;
+      --accent:       #4f4fd4;
+      --cost:         #1a8a3a;
+      --flag:         #b84800;
+      --danger:       #cc2020;
+      --btn-border:   #c4c4d8;
+      --btn-active-bg:     #dcdcec;
+      --btn-active-border: #a8a8c8;
+      --input-bg:     #ebebf2;
+    }
+
+    :root[data-theme="dark"] {
       --bg:           #0f0f11;
       --surface:      #141418;
       --raised:       #1a1a22;
@@ -27,27 +48,6 @@
       --btn-active-bg:     #2e2e38;
       --btn-active-border: #3e3e50;
       --input-bg:     #1a1a22;
-    }
-
-    :root[data-theme="light"] {
-      --bg:           #f4f4f8;
-      --surface:      #ffffff;
-      --raised:       #ebebf2;
-      --border:       #dcdce8;
-      --border-sub:   #e8e8f2;
-      --text:         #1c1c2e;
-      --text-2:       #4c4c68;
-      --text-3:       #808098;
-      --text-4:       #6868880;
-      --white:        #1c1c2e;
-      --accent:       #4f4fd4;
-      --cost:         #1a8a3a;
-      --flag:         #b84800;
-      --danger:       #cc2020;
-      --btn-border:   #c4c4d8;
-      --btn-active-bg:     #dcdcec;
-      --btn-active-border: #a8a8c8;
-      --input-bg:     #ebebf2;
     }
 
     body {
@@ -375,7 +375,7 @@
   <header>
     <h1>PromptLedger</h1>
     <div class="header-actions">
-      <button class="btn" id="theme-btn">Light mode</button>
+      <button class="btn" id="theme-btn">Dark mode</button>
       <button class="btn btn-primary" id="export-btn">Export CSV</button>
       <button class="btn btn-danger" id="clear-btn">Clear all</button>
     </div>
