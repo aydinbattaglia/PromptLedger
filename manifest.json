@@ -10,7 +10,7 @@
     "notifications"
   ],
   "host_permissions": [
-    "*://*.runway.com/*",
+    "*://*.runwayml.com/*",
     "*://*.midjourney.com/*",
     "*://*.elevenlabs.io/*"
   ],
@@ -21,7 +21,7 @@
   "content_scripts": [
     {
       "matches": [
-        "*://*.runway.com/*",
+        "*://*.runwayml.com/*",
         "*://*.midjourney.com/*",
         "*://*.elevenlabs.io/*"
       ],
@@ -31,12 +31,24 @@
     },
     {
       "matches": [
-        "*://*.runway.com/*",
+        "*://*.runwayml.com/*",
         "*://*.midjourney.com/*",
         "*://*.elevenlabs.io/*"
       ],
       "js": ["content/index.js"],
       "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "*://app.runwayml.com/settings*",
+        "*://app.runwayml.com/account*",
+        "*://elevenlabs.io/subscription*",
+        "*://elevenlabs.io/settings*",
+        "*://www.midjourney.com/account*",
+        "*://midjourney.com/account*"
+      ],
+      "js": ["plans/detector.js"],
+      "run_at": "document_idle"
     }
   ],
   "action": {

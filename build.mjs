@@ -4,7 +4,7 @@ import { mkdirSync, copyFileSync, existsSync, rmSync } from 'fs';
 const watch = process.argv.includes('--watch');
 
 if (existsSync('dist')) rmSync('dist', { recursive: true });
-for (const dir of ['dist', 'dist/popup', 'dist/dashboard', 'dist/background', 'dist/content', 'dist/inject']) {
+for (const dir of ['dist', 'dist/popup', 'dist/dashboard', 'dist/background', 'dist/content', 'dist/inject', 'dist/plans']) {
   mkdirSync(dir, { recursive: true });
 }
 
@@ -28,6 +28,7 @@ const pagesConfig = {
     { in: 'src/content/index.ts', out: 'content/index' },
     { in: 'src/popup/popup.ts', out: 'popup/popup' },
     { in: 'src/dashboard/dashboard.ts', out: 'dashboard/dashboard' },
+    { in: 'src/plans/detector.ts', out: 'plans/detector' },
   ],
   bundle: true,
   outdir: 'dist',

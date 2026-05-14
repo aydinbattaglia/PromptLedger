@@ -135,12 +135,11 @@ function createRunwayAdapter(): Adapter {
             }),
           );
 
-          // Timeout: Runway video generation max ~5 min; complete with null balance if exceeded
+          // Timeout: Runway video generation max ~5 min; null signals "cost unknown → flag"
           const timeout = setTimeout(() => {
             if (completed) return;
             finish();
-            // Pass balanceBefore so SW sees delta=0 → credits_used=null → flagged=true
-            context.complete(sessionKey, { balance_after: balanceBefore });
+            context.complete(sessionKey, { balance_after: null });
           }, 5 * 60_000);
 
           cleanups.push(() => { finish(); clearTimeout(timeout); });

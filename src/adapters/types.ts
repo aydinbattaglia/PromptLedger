@@ -7,11 +7,12 @@ export interface AdapterContext {
    */
   start(opts: { model?: string; prompt: string | null; balance_before: number }): string;
 
-  /** Fire GENERATION_COMPLETE. No-op if sessionKey is empty (paused). */
+  /** Fire GENERATION_COMPLETE. No-op if sessionKey is empty (paused).
+   *  Pass balance_after: null when the generation timed out and cost is unknown. */
   complete(
     sessionKey: string,
     opts: {
-      balance_after: number;
+      balance_after: number | null;
       generation_id?: string;
       duration_sec?: number;
       resolution?: string;

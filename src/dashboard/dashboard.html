@@ -5,25 +5,429 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PromptLedger — Dashboard</title>
   <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 13px;
       background: #0f0f11;
       color: #e2e2e8;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 24px;
+      border-bottom: 1px solid #1e1e24;
+      position: sticky;
+      top: 0;
+      background: #0f0f11;
+      z-index: 10;
+    }
+
+    h1 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: -0.01em;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      font-size: 12px;
+      padding: 5px 12px;
+      border-radius: 5px;
+      border: 1px solid #2e2e38;
+      background: transparent;
+      color: #9898a8;
+      cursor: pointer;
+      transition: background 0.1s, color 0.1s;
+    }
+    .btn:hover { background: #1e1e24; color: #e2e2e8; }
+    .btn-primary {
+      border-color: #7c7cff;
+      color: #7c7cff;
+    }
+    .btn-primary:hover { background: #7c7cff; color: #fff; }
+    .btn-danger {
+      border-color: #ff5555;
+      color: #ff5555;
+    }
+    .btn-danger:hover { background: #ff5555; color: #fff; }
+
+    /* ── Main layout ── */
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    /* ── Filter bar ── */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 20px;
+      align-items: flex-end;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .filter-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #686878;
+    }
+
+    select, input[type="date"], input[type="text"] {
+      background: #1a1a22;
+      border: 1px solid #2e2e38;
+      border-radius: 5px;
+      color: #e2e2e8;
+      font-size: 12px;
+      padding: 6px 10px;
+      outline: none;
+    }
+    select:focus, input:focus { border-color: #7c7cff; }
+
+    select { min-width: 120px; }
+    input[type="date"] { width: 140px; }
+    input[type="text"] { width: 200px; }
+
+    .filter-actions {
+      display: flex;
+      gap: 6px;
+      align-items: flex-end;
+    }
+
+    /* ── Summary cards ── */
+    .summary-cards {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: #1e1e24;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+
+    .card {
+      background: #0f0f11;
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .card-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #686878;
+    }
+
+    .card-value {
+      font-size: 22px;
+      font-weight: 600;
+      color: #fff;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .card-value.flagged { color: #ff8c55; }
+
+    /* ── Charts row ── */
+    .charts-row {
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .chart-box {
+      background: #141418;
+      border: 1px solid #1e1e24;
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .chart-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .chart-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #686878;
+    }
+
+    .range-toggle {
+      display: flex;
+      gap: 2px;
+    }
+
+    .range-btn {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 3px;
+      border: 1px solid #2e2e38;
+      background: transparent;
+      color: #686878;
+      cursor: pointer;
+    }
+    .range-btn.active {
+      background: #2e2e38;
+      color: #e2e2e8;
+      border-color: #3e3e50;
+    }
+
+    .chart-canvas-wrap { position: relative; }
+    #timeseries-chart { width: 100% !important; height: 180px !important; }
+    #donut-chart { width: 100% !important; height: 180px !important; }
+
+    /* ── Table section ── */
+    .table-section {
+      background: #141418;
+      border: 1px solid #1e1e24;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .table-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid #1e1e24;
+    }
+
+    .table-header .chart-title { margin: 0; }
+
+    .record-count {
+      font-size: 11px;
+      color: #686878;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead th {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #686878;
+      text-align: left;
+      padding: 8px 16px;
+      border-bottom: 1px solid #1e1e24;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid #1a1a20;
+      transition: background 0.1s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #1a1a22; }
+    tbody tr.flagged-row td:first-child { border-left: 2px solid #ff8c55; }
+
+    tbody td {
+      padding: 9px 16px;
+      color: #b0b0c0;
+      font-size: 12px;
+      vertical-align: middle;
+    }
+
+    td.ts { color: #686878; font-size: 11px; white-space: nowrap; }
+    td.tool { text-transform: capitalize; color: #e2e2e8; }
+    td.model { font-size: 11px; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    td.prompt-cell { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #9898a8; }
+    td.num { font-variant-numeric: tabular-nums; text-align: right; color: #e2e2e8; }
+    td.cost { font-variant-numeric: tabular-nums; text-align: right; color: #7cff9e; }
+    td.actions { text-align: right; white-space: nowrap; }
+
+    .del-btn {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 3px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: #686878;
+      cursor: pointer;
+    }
+    .del-btn:hover { border-color: #ff5555; color: #ff5555; }
+
+    .flag-badge {
+      display: inline-block;
+      font-size: 9px;
+      padding: 1px 5px;
+      border-radius: 3px;
+      background: #3a1a0a;
+      color: #ff8c55;
+      margin-left: 4px;
+      vertical-align: middle;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Pagination ── */
+    .pagination {
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 100vh;
-      margin: 0;
+      gap: 6px;
+      padding: 12px 16px;
+      border-top: 1px solid #1e1e24;
     }
-    .placeholder { text-align: center; color: #686878; }
-    .placeholder h1 { font-size: 18px; color: #fff; margin-bottom: 8px; }
+
+    .page-btn {
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      border: 1px solid #2e2e38;
+      background: transparent;
+      color: #686878;
+      cursor: pointer;
+    }
+    .page-btn:hover:not(:disabled) { background: #1e1e24; color: #e2e2e8; }
+    .page-btn:disabled { opacity: 0.3; cursor: default; }
+    .page-btn.active { background: #2e2e38; color: #e2e2e8; border-color: #3e3e50; }
+
+    .page-info {
+      font-size: 11px;
+      color: #686878;
+      padding: 0 4px;
+    }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: #686878;
+    }
+    .empty-state p { line-height: 1.8; }
+
+    /* ── Loading ── */
+    .loading {
+      text-align: center;
+      padding: 32px;
+      color: #686878;
+    }
   </style>
 </head>
 <body>
-  <div class="placeholder">
+  <header>
     <h1>PromptLedger</h1>
-    <p>Full dashboard coming in Phase 5.</p>
-  </div>
+    <div class="header-actions">
+      <button class="btn btn-primary" id="export-btn">Export CSV</button>
+      <button class="btn btn-danger" id="clear-btn">Clear all</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Filter bar -->
+    <div class="filter-bar">
+      <div class="filter-group">
+        <span class="filter-label">Tool</span>
+        <select id="filter-tool">
+          <option value="">All tools</option>
+          <option value="runway">Runway</option>
+          <option value="midjourney">Midjourney</option>
+          <option value="elevenlabs">ElevenLabs</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">From</span>
+        <input type="date" id="filter-from" />
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">To</span>
+        <input type="date" id="filter-to" />
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Search</span>
+        <input type="text" id="filter-search" placeholder="Filter by prompt…" />
+      </div>
+      <div class="filter-actions">
+        <button class="btn" id="filter-apply">Apply</button>
+        <button class="btn" id="filter-clear">Clear</button>
+      </div>
+    </div>
+
+    <!-- Summary cards -->
+    <div class="summary-cards">
+      <div class="card">
+        <span class="card-label">Total cost</span>
+        <span class="card-value" id="sum-cost">—</span>
+      </div>
+      <div class="card">
+        <span class="card-label">Total credits</span>
+        <span class="card-value" id="sum-credits">—</span>
+      </div>
+      <div class="card">
+        <span class="card-label">Generations</span>
+        <span class="card-value" id="sum-count">—</span>
+      </div>
+      <div class="card">
+        <span class="card-label">Flagged</span>
+        <span class="card-value flagged" id="sum-flagged">—</span>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-row">
+      <div class="chart-box">
+        <div class="chart-header">
+          <span class="chart-title">Daily spend</span>
+          <div class="range-toggle">
+            <button class="range-btn active" data-days="30">30d</button>
+            <button class="range-btn" data-days="90">90d</button>
+          </div>
+        </div>
+        <div class="chart-canvas-wrap">
+          <canvas id="timeseries-chart"></canvas>
+        </div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-header">
+          <span class="chart-title">By tool</span>
+        </div>
+        <div class="chart-canvas-wrap">
+          <canvas id="donut-chart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Log table -->
+    <div class="table-section">
+      <div class="table-header">
+        <span class="chart-title">Generations</span>
+        <span class="record-count" id="record-count"></span>
+      </div>
+      <div id="table-wrap">
+        <div class="loading">Loading…</div>
+      </div>
+      <div class="pagination" id="pagination" style="display:none"></div>
+    </div>
+  </main>
+
   <script src="dashboard.js"></script>
 </body>
 </html>

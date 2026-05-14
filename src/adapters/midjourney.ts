@@ -91,7 +91,7 @@ function createMidjourneyAdapter(): Adapter {
 
           const timeout = setTimeout(() => {
             unwatch();
-            context.complete(sessionKey, { balance_after: balanceBefore });
+            context.complete(sessionKey, { balance_after: null });
           }, 3 * 60_000);
 
           cleanups.push(() => { unwatch(); clearTimeout(timeout); });

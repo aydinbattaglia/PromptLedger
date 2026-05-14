@@ -34,7 +34,8 @@ export interface GenerationStartPayload {
 export interface GenerationCompletePayload {
   session_key: string;
   tool: ToolId;
-  balance_after: number;
+  /** null when the generation timed out and the actual cost is unknown. */
+  balance_after: number | null;
   generation_id?: string;
   duration_sec?: number;
   resolution?: string;

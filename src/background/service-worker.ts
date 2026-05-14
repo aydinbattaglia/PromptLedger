@@ -55,7 +55,9 @@ async function handleMessage(message: ExtensionMessage): Promise<void> {
     inFlight.delete(session_key);
 
     const credits_used =
-      entry !== undefined ? Math.max(0, entry.balance_before - balance_after) : null;
+      entry !== undefined && balance_after !== null
+        ? Math.max(0, entry.balance_before - balance_after)
+        : null;
 
     const plan_rate = entry?.partial.plan_rate ?? null;
     const cost_usd =

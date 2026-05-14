@@ -78,7 +78,10 @@ function createElevenLabsAdapter(): Adapter {
             }),
           );
 
-          const timeout = setTimeout(unwatch, 60_000);
+          const timeout = setTimeout(() => {
+            unwatch();
+            context.complete(sessionKey, { balance_after: null });
+          }, 60_000);
           cleanups.push(() => { unwatch(); clearTimeout(timeout); });
         }),
       );
