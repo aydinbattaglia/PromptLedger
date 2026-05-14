@@ -131,14 +131,17 @@ function renderTimeseries(): void {
     return;
   }
 
+  const gridColor = chartColor('#1e1e24', '#dcdce8');
+  const tickColor = chartColor('#686878', '#808098');
+
   timeseriesChart = new Chart(canvas, {
     type: 'line',
     data: {
       labels,
       datasets: [{
         data,
-        borderColor: '#7c7cff',
-        backgroundColor: 'rgba(124,124,255,0.08)',
+        borderColor: chartColor('#7c7cff', '#4f4fd4'),
+        backgroundColor: chartColor('rgba(124,124,255,0.08)', 'rgba(79,79,212,0.07)'),
         borderWidth: 1.5,
         pointRadius: 0,
         fill: true,
@@ -152,8 +155,8 @@ function renderTimeseries(): void {
         callbacks: { label: (ctx) => ` $${(ctx.raw as number).toFixed(2)}` },
       } },
       scales: {
-        x: { ticks: { color: '#686878', font: { size: 10 }, maxTicksLimit: 8 }, grid: { color: '#1e1e24' } },
-        y: { ticks: { color: '#686878', font: { size: 10 }, callback: (v) => `$${Number(v).toFixed(2)}` }, grid: { color: '#1e1e24' }, beginAtZero: true },
+        x: { ticks: { color: tickColor, font: { size: 10 }, maxTicksLimit: 8 }, grid: { color: gridColor } },
+        y: { ticks: { color: tickColor, font: { size: 10 }, callback: (v) => `$${Number(v).toFixed(2)}` }, grid: { color: gridColor }, beginAtZero: true },
       },
     },
   });
@@ -369,6 +372,40 @@ async function handleClearAll(): Promise<void> {
   renderAll();
 }
 
+// ── Theme ─────────────────────────────────────────────────────────────────────
+
+function isLight(): boolean {
+  return document.documentElement.dataset['theme'] === 'light';
+}
+
+function chartColor(dark: string, light: string): string {
+  return isLight() ? light : dark;
+}
+
+function initTheme(): void {
+  if (localStorage.getItem('pl-theme') === 'light') {
+    document.documentElement.dataset['theme'] = 'light';
+    (document.getElementById('theme-btn') as HTMLButtonElement).textContent = 'Dark mode';
+  }
+}
+
+function toggleTheme(): void {
+  const toLight = !isLight();
+  if (toLight) {
+    document.documentElement.dataset['theme'] = 'light';
+    localStorage.setItem('pl-theme', 'light');
+    (document.getElementById('theme-btn') as HTMLButtonElement).textContent = 'Dark mode';
+  } else {
+    delete document.documentElement.dataset['theme'];
+    localStorage.setItem('pl-theme', 'dark');
+    (document.getElementById('theme-btn') as HTMLButtonElement).textContent = 'Light mode';
+  }
+  if (timeseriesChart) { timeseriesChart.destroy(); timeseriesChart = null; }
+  if (donutChart) { donutChart.destroy(); donutChart = null; }
+  renderTimeseries();
+  renderDonut();
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function setText(id: string, text: string): void {
@@ -383,6 +420,7 @@ function escHtml(s: string): string {
 // ── Wire up events ────────────────────────────────────────────────────────────
 
 document.getElementById('filter-apply')!.addEventListener('click', applyFilters);
+document.getElementById('filter-tool')!.addEventListener('change', applyFilters);
 document.getElementById('filter-clear')!.addEventListener('click', () => {
   (document.getElementById('filter-tool') as HTMLSelectElement).value = '';
   (document.getElementById('filter-from') as HTMLInputElement).value = '';
@@ -407,9 +445,11 @@ document.querySelectorAll('.range-btn').forEach((btn) => {
   });
 });
 
+document.getElementById('theme-btn')!.addEventListener('click', toggleTheme);
 document.getElementById('export-btn')!.addEventListener('click', exportCSV);
 document.getElementById('clear-btn')!.addEventListener('click', () => void handleClearAll());
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 
+initTheme();
 load().catch(console.error);
