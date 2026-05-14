@@ -12,7 +12,7 @@ import {
   Filler,
 } from 'chart.js';
 
-import { getRecords, deleteRecord, clearAll } from '../storage/idb.js';
+import { getRecords, saveRecord, deleteRecord, clearAll } from '../storage/idb.js';
 import type { GenerationRecord, RecordFilters, ToolId } from '../types/index.js';
 
 Chart.register(
@@ -33,6 +33,7 @@ const TOOL_COLORS: Record<string, string> = {
 
 let allRecords: GenerationRecord[] = [];
 let filteredRecords: GenerationRecord[] = [];
+let projectList: string[] = [];
 let currentPage = 0;
 let chartDays = 30;
 let timeseriesChart: Chart | null = null;
@@ -89,9 +90,9 @@ async function loadProjectFilter(): Promise<void> {
   const stored = await new Promise<Record<string, unknown>>((resolve) =>
     chrome.storage.local.get('project_list', resolve),
   );
-  const list = (stored['project_list'] as string[] | undefined) ?? [];
+  projectList = (stored['project_list'] as string[] | undefined) ?? [];
   const select = document.getElementById('filter-project') as HTMLSelectElement;
-  for (const name of list) {
+  for (const name of projectList) {
     const opt = document.createElement('option');
     opt.value = name;
     opt.textContent = name;
@@ -297,8 +298,12 @@ function renderTable(): void {
       <td class="prompt-cell" title="${escHtml(r.prompt ?? '')}">${escHtml(r.prompt ?? '—')}</td>
       <td class="num">${r.credits_used !== null ? Math.round(r.credits_used).toLocaleString() : '—'}</td>
       <td class="cost">${r.cost_usd !== null ? `$${r.cost_usd.toFixed(4)}` : '—'}</td>
-      <td class="actions"><button class="del-btn" title="Delete">✕</button></td>`;
+      <td class="actions">
+        <button class="tag-btn" title="Set project">tag</button>
+        <button class="del-btn" title="Delete">✕</button>
+      </td>`;
 
+    tr.querySelector('.tag-btn')!.addEventListener('click', () => showRetagSelect(tr, r));
     tr.querySelector('.del-btn')!.addEventListener('click', () => handleDelete(r.id));
     tbody.appendChild(tr);
   }
@@ -344,6 +349,43 @@ function renderPagination(totalPages: number, el: HTMLElement): void {
   next.disabled = currentPage === totalPages - 1;
   next.addEventListener('click', () => { currentPage++; renderTable(); });
   el.appendChild(next);
+}
+
+// ── Retag ─────────────────────────────────────────────────────────────────────
+
+function showRetagSelect(tr: HTMLTableRowElement, r: GenerationRecord): void {
+  const cell = tr.querySelector('.actions') as HTMLTableCellElement;
+
+  const sel = document.createElement('select');
+  sel.className = 'retag-select';
+  sel.innerHTML =
+    '<option value="">None</option>' +
+    projectList
+      .map((p) => `<option value="${escHtml(p)}">${escHtml(p)}</option>`)
+      .join('');
+  sel.value = r.project_tag ?? '';
+
+  cell.innerHTML = '';
+  cell.appendChild(sel);
+  sel.focus();
+
+  let committed = false;
+
+  const doSave = async (val: string) => {
+    committed = true;
+    const tag = val || null;
+    const updated: GenerationRecord = { ...r, project_tag: tag };
+    await saveRecord(updated);
+    const ai = allRecords.findIndex((x) => x.id === r.id);
+    if (ai !== -1) allRecords[ai] = updated;
+    const fi = filteredRecords.findIndex((x) => x.id === r.id);
+    if (fi !== -1) filteredRecords[fi] = updated;
+    renderTable();
+  };
+
+  sel.addEventListener('change', () => void doSave(sel.value));
+  sel.addEventListener('keydown', (e) => { if (e.key === 'Escape') { committed = true; renderTable(); } });
+  sel.addEventListener('blur', () => setTimeout(() => { if (!committed) renderTable(); }, 0));
 }
 
 // ── Delete ────────────────────────────────────────────────────────────────────

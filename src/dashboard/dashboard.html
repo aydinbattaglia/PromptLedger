@@ -307,6 +307,29 @@
     td.cost { font-variant-numeric: tabular-nums; text-align: right; color: var(--cost); }
     td.actions { text-align: right; white-space: nowrap; }
 
+    .tag-btn {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 3px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-3);
+      cursor: pointer;
+      transition: border-color 0.1s, color 0.1s;
+    }
+    .tag-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    .retag-select {
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      border: 1px solid var(--accent);
+      background: var(--surface);
+      color: var(--text);
+      outline: none;
+      max-width: 130px;
+    }
+
     .del-btn {
       font-size: 11px;
       padding: 2px 8px;
