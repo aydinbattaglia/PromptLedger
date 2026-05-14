@@ -319,6 +319,20 @@
     }
     .del-btn:hover { border-color: var(--danger); color: var(--danger); }
 
+    .proj-badge {
+      display: inline-block;
+      font-size: 9px;
+      padding: 1px 5px;
+      border-radius: 3px;
+      background: rgba(79,79,212,0.1);
+      color: var(--accent);
+      margin-left: 4px;
+      vertical-align: middle;
+      letter-spacing: 0;
+      text-transform: none;
+      font-weight: normal;
+    }
+
     .flag-badge {
       display: inline-block;
       font-size: 9px;
@@ -391,6 +405,12 @@
           <option value="runway">Runway</option>
           <option value="midjourney">Midjourney</option>
           <option value="elevenlabs">ElevenLabs</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Project</span>
+        <select id="filter-project">
+          <option value="">All projects</option>
         </select>
       </div>
       <div class="filter-group">

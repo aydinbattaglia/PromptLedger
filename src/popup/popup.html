@@ -96,6 +96,84 @@
       line-height: 1.6;
     }
 
+    /* ── Projects section ── */
+    #projects {
+      padding: 10px 16px 14px;
+      border-bottom: 1px solid #1e1e24;
+    }
+
+    .project-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    #project-select {
+      flex: 1;
+      background: #1e1e24;
+      border: 1px solid #2e2e38;
+      border-radius: 4px;
+      color: #e2e2e8;
+      font-size: 12px;
+      padding: 4px 8px;
+      outline: none;
+    }
+    #project-select:focus { border-color: #7c7cff; }
+
+    #new-proj-btn {
+      font-size: 15px;
+      line-height: 1;
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      border: 1px solid #2e2e38;
+      background: transparent;
+      color: #9898a8;
+      cursor: pointer;
+    }
+    #new-proj-btn:hover { background: #1e1e24; color: #e2e2e8; }
+
+    .project-form {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .project-form.visible { display: flex; }
+
+    .proj-input {
+      flex: 1;
+      background: #1e1e24;
+      border: 1px solid #2e2e38;
+      border-radius: 4px;
+      color: #e2e2e8;
+      font-size: 12px;
+      padding: 4px 8px;
+      outline: none;
+    }
+    .proj-input:focus { border-color: #7c7cff; }
+
+    .proj-save {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      border: 1px solid #7c7cff;
+      background: transparent;
+      color: #7c7cff;
+      cursor: pointer;
+    }
+    .proj-save:hover { background: #7c7cff; color: #fff; }
+
+    .proj-cancel {
+      font-size: 11px;
+      background: none;
+      border: none;
+      color: #686878;
+      cursor: pointer;
+      padding: 0 2px;
+    }
+    .proj-cancel:hover { color: #e2e2e8; }
+
     /* ── Plans section ── */
     #plans {
       padding: 10px 16px 14px;
@@ -227,6 +305,21 @@
   </div>
 
   <div id="by-tool"></div>
+
+  <section id="projects">
+    <div class="section-label">Active project</div>
+    <div class="project-row">
+      <select id="project-select">
+        <option value="">None — don't tag</option>
+      </select>
+      <button id="new-proj-btn" title="New project">+</button>
+    </div>
+    <div class="project-form" id="project-form">
+      <input class="proj-input" id="proj-input" type="text" placeholder="Project name" maxlength="40" />
+      <button class="proj-save" id="proj-save">Add</button>
+      <button class="proj-cancel" id="proj-cancel">✕</button>
+    </div>
+  </section>
 
   <section id="plans">
     <div class="section-label">Plans</div>

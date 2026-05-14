@@ -83,7 +83,7 @@ async function handleMessage(message: ExtensionMessage): Promise<void> {
       credits_used: flagged ? null : credits_used,
       cost_usd: flagged ? null : cost_usd,
       plan_rate,
-      project_tag: null,
+      project_tag: await getActiveProject(),
       duration_sec: duration_sec ?? null,
       resolution: resolution ?? null,
       generation_id: generation_id ?? null,
@@ -138,6 +138,15 @@ async function getPlanRate(tool: ToolId): Promise<number | null> {
     chrome.storage.local.get(`plan_rate_${tool}`, (result) => {
       const val = result[`plan_rate_${tool}`];
       resolve(typeof val === 'number' ? val : null);
+    });
+  });
+}
+
+async function getActiveProject(): Promise<string | null> {
+  return new Promise((resolve) => {
+    chrome.storage.local.get('active_project', (result) => {
+      const val = result['active_project'];
+      resolve(typeof val === 'string' && val.length > 0 ? val : null);
     });
   });
 }

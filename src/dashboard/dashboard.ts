@@ -42,12 +42,14 @@ let donutChart: Chart | null = null;
 
 function getFilters(): RecordFilters {
   const tool = (document.getElementById('filter-tool') as HTMLSelectElement).value as ToolId | '';
+  const project = (document.getElementById('filter-project') as HTMLSelectElement).value;
   const from = (document.getElementById('filter-from') as HTMLInputElement).value;
   const to = (document.getElementById('filter-to') as HTMLInputElement).value;
   const search = (document.getElementById('filter-search') as HTMLInputElement).value.trim();
 
   return {
     ...(tool ? { tool } : {}),
+    ...(project ? { project_tag: project } : {}),
     ...(from ? { from: new Date(from).toISOString() } : {}),
     ...(to ? { to: new Date(to + 'T23:59:59').toISOString() } : {}),
     ...(search ? { search } : {}),
@@ -58,6 +60,7 @@ function applyFilters(): void {
   const filters = getFilters();
   filteredRecords = allRecords.filter((r) => {
     if (filters.tool && r.tool !== filters.tool) return false;
+    if (filters.project_tag && r.project_tag !== filters.project_tag) return false;
     if (filters.from && r.timestamp < filters.from) return false;
     if (filters.to && r.timestamp > filters.to) return false;
     if (filters.search) {
@@ -73,9 +76,27 @@ function applyFilters(): void {
 // ── Load ─────────────────────────────────────────────────────────────────────
 
 async function load(): Promise<void> {
-  allRecords = await getRecords();
+  const [records] = await Promise.all([
+    getRecords(),
+    loadProjectFilter(),
+  ]);
+  allRecords = records;
   filteredRecords = allRecords;
   renderAll();
+}
+
+async function loadProjectFilter(): Promise<void> {
+  const stored = await new Promise<Record<string, unknown>>((resolve) =>
+    chrome.storage.local.get('project_list', resolve),
+  );
+  const list = (stored['project_list'] as string[] | undefined) ?? [];
+  const select = document.getElementById('filter-project') as HTMLSelectElement;
+  for (const name of list) {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    select.appendChild(opt);
+  }
 }
 
 function renderAll(): void {
@@ -266,9 +287,12 @@ function renderTable(): void {
     const ts = new Date(r.timestamp);
     const tsStr = `${ts.toLocaleDateString()} ${ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
+    const projBadge = r.project_tag
+      ? `<span class="proj-badge">${escHtml(r.project_tag)}</span>`
+      : '';
     tr.innerHTML = `
       <td class="ts">${tsStr}</td>
-      <td class="tool">${r.tool}${r.flagged ? '<span class="flag-badge">flagged</span>' : ''}</td>
+      <td class="tool">${r.tool}${r.flagged ? '<span class="flag-badge">flagged</span>' : ''}${projBadge}</td>
       <td class="model" title="${escHtml(r.model)}">${escHtml(r.model)}</td>
       <td class="prompt-cell" title="${escHtml(r.prompt ?? '')}">${escHtml(r.prompt ?? '—')}</td>
       <td class="num">${r.credits_used !== null ? Math.round(r.credits_used).toLocaleString() : '—'}</td>
@@ -421,8 +445,10 @@ function escHtml(s: string): string {
 
 document.getElementById('filter-apply')!.addEventListener('click', applyFilters);
 document.getElementById('filter-tool')!.addEventListener('change', applyFilters);
+document.getElementById('filter-project')!.addEventListener('change', applyFilters);
 document.getElementById('filter-clear')!.addEventListener('click', () => {
   (document.getElementById('filter-tool') as HTMLSelectElement).value = '';
+  (document.getElementById('filter-project') as HTMLSelectElement).value = '';
   (document.getElementById('filter-from') as HTMLInputElement).value = '';
   (document.getElementById('filter-to') as HTMLInputElement).value = '';
   (document.getElementById('filter-search') as HTMLInputElement).value = '';

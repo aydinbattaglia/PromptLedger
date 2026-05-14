@@ -5,7 +5,8 @@ const TOOLS = ['runway', 'elevenlabs', 'midjourney'] as const;
 type Tool = typeof TOOLS[number];
 
 async function init(): Promise<void> {
-  await Promise.all([renderStats(), renderPlans(), wirePause(), wireDashboard()]);
+  wireProjectEvents();
+  await Promise.all([renderStats(), renderPlans(), renderProjects(), wirePause(), wireDashboard()]);
 }
 
 // ── Stats ────────────────────────────────────────────────────────────────────
@@ -32,6 +33,62 @@ async function renderStats(): Promise<void> {
     row.innerHTML = `<span class="tool-name">${tool}</span><span class="tool-cost">$${data.cost_usd.toFixed(2)}</span>`;
     byToolEl.appendChild(row);
   }
+}
+
+// ── Projects ─────────────────────────────────────────────────────────────────
+
+async function renderProjects(): Promise<void> {
+  const { project_list, active_project } = await storageGet(['project_list', 'active_project']);
+  const list = (project_list as string[] | undefined) ?? [];
+  const active = (active_project as string | undefined) ?? '';
+
+  const select = document.getElementById('project-select') as HTMLSelectElement;
+  const current = select.value;
+  select.innerHTML = "<option value=''>None — don't tag</option>";
+  for (const name of list) {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    select.appendChild(opt);
+  }
+  select.value = active || current;
+}
+
+function wireProjectEvents(): void {
+  const select = document.getElementById('project-select') as HTMLSelectElement;
+  const form = document.getElementById('project-form')!;
+  const input = document.getElementById('proj-input') as HTMLInputElement;
+
+  select.addEventListener('change', () => {
+    storageSet({ active_project: select.value }).catch(console.error);
+  });
+
+  document.getElementById('new-proj-btn')!.addEventListener('click', () => {
+    form.classList.add('visible');
+    input.focus();
+  });
+
+  document.getElementById('proj-cancel')!.addEventListener('click', () => {
+    form.classList.remove('visible');
+    input.value = '';
+  });
+
+  const doSave = async () => {
+    const name = input.value.trim();
+    if (!name) return;
+    const { project_list: cur } = await storageGet(['project_list']);
+    const existing = (cur as string[] | undefined) ?? [];
+    if (!existing.includes(name)) {
+      await storageSet({ project_list: [...existing, name] });
+    }
+    await storageSet({ active_project: name });
+    form.classList.remove('visible');
+    input.value = '';
+    await renderProjects();
+  };
+
+  document.getElementById('proj-save')!.addEventListener('click', () => void doSave());
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') void doSave(); });
 }
 
 // ── Plans ────────────────────────────────────────────────────────────────────
