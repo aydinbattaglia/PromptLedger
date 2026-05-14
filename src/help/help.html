@@ -214,6 +214,77 @@
       border-radius: 3px;
     }
 
+    /* ── Table of contents ── */
+    .toc {
+      background: #fff;
+      border: 1px solid #dcdce8;
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-bottom: 44px;
+    }
+
+    .toc-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #808098;
+      margin-bottom: 12px;
+    }
+
+    .toc ol {
+      list-style: none;
+      counter-reset: toc;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .toc li {
+      counter-increment: toc;
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+
+    .toc li::before {
+      content: counter(toc);
+      font-size: 11px;
+      font-weight: 600;
+      color: #c0c0d8;
+      width: 16px;
+      flex-shrink: 0;
+      text-align: right;
+    }
+
+    .toc a {
+      font-size: 13px;
+      color: #4f4fd4;
+      text-decoration: none;
+    }
+    .toc a:hover { text-decoration: underline; }
+
+    /* ── Back to top ── */
+    #back-to-top {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 7px 14px;
+      border-radius: 20px;
+      border: 1px solid #c4c4d8;
+      background: #fff;
+      color: #4f4fd4;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    #back-to-top.visible { opacity: 1; pointer-events: auto; }
+    #back-to-top:hover { background: #4f4fd4; color: #fff; border-color: #4f4fd4; }
+
     /* ── Badge previews ── */
     .badge-row {
       display: flex;
@@ -245,8 +316,23 @@
     <h1 class="page-title">How PromptLedger works</h1>
     <p class="page-sub">A reference guide to every feature, field, and status indicator.</p>
 
+    <!-- ── Table of contents ── -->
+    <nav class="toc">
+      <div class="toc-title">Contents</div>
+      <ol>
+        <li><a href="#getting-started">Getting started</a></li>
+        <li><a href="#costs">How costs are calculated</a></li>
+        <li><a href="#fields">Log table fields</a></li>
+        <li><a href="#flagged">Flagged records</a></li>
+        <li><a href="#projects">Project tags</a></li>
+        <li><a href="#dashboard">Dashboard features</a></li>
+        <li><a href="#currency">Currency conversion</a></li>
+        <li><a href="#pausing">Pausing tracking</a></li>
+      </ol>
+    </nav>
+
     <!-- ── Getting started ── -->
-    <div class="section">
+    <div class="section" id="getting-started">
       <div class="section-title">Getting started</div>
       <div class="steps">
         <div class="step">
@@ -274,7 +360,7 @@
     </div>
 
     <!-- ── How costs are calculated ── -->
-    <div class="section">
+    <div class="section" id="costs">
       <div class="section-title">How costs are calculated</div>
       <h3>Plan rate</h3>
       <p>Each tool prices credits differently. PromptLedger stores a <strong>plan rate</strong> — the number of credits (or characters, or GPU-hours) you get per dollar — and uses it to convert credit deltas into a dollar cost:</p>
@@ -286,7 +372,7 @@
     </div>
 
     <!-- ── Log table fields ── -->
-    <div class="section">
+    <div class="section" id="fields">
       <div class="section-title">Log table fields</div>
       <table class="field-table">
         <thead>
@@ -329,7 +415,7 @@
     </div>
 
     <!-- ── Flagged records ── -->
-    <div class="section">
+    <div class="section" id="flagged">
       <div class="section-title">Flagged records</div>
 
       <div class="badge-row">
@@ -357,7 +443,7 @@
     </div>
 
     <!-- ── Project tags ── -->
-    <div class="section">
+    <div class="section" id="projects">
       <div class="section-title">Project tags</div>
 
       <div class="badge-row">
@@ -377,7 +463,7 @@
     </div>
 
     <!-- ── Dashboard features ── -->
-    <div class="section">
+    <div class="section" id="dashboard">
       <div class="section-title">Dashboard features</div>
 
       <h3>Summary cards</h3>
@@ -404,7 +490,7 @@
     </div>
 
     <!-- ── Currency ── -->
-    <div class="section">
+    <div class="section" id="currency">
       <div class="section-title">Currency conversion</div>
       <p>By default all costs are displayed in US dollars (USD). You can switch to any of the ten supported currencies using the dropdown in the dashboard header:</p>
       <p style="margin: 10px 0; color: #4c4c68;">
@@ -434,11 +520,14 @@
     </div>
 
     <!-- ── Pause ── -->
-    <div class="section">
+    <div class="section" id="pausing">
       <div class="section-title">Pausing tracking</div>
       <p>The "Pause" button in the popup header stops all capture. Generations made while paused are not logged. Click "Resume" to start recording again. The paused state persists across browser restarts.</p>
     </div>
 
   </div>
+
+  <button id="back-to-top">↑ Top</button>
+  <script src="help.js"></script>
 </body>
 </html>

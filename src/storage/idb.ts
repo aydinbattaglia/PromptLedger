@@ -1,4 +1,4 @@
-import type { GenerationRecord, RecordFilters, UsageStats } from '../types/index.js';
+import type { GenerationRecord, RecordFilters, ToolId, UsageStats } from '../types/index.js';
 
 const DB_NAME = 'promptledger';
 const DB_VERSION = 1;
@@ -101,6 +101,11 @@ export async function clearAll(): Promise<void> {
   const db = await openDB();
   await runTx(db, 'readwrite', (store) => store.clear());
   db.close();
+}
+
+export async function getToolSpend(tool: ToolId, sinceIso: string): Promise<number> {
+  const records = await getRecords({ tool, from: sinceIso });
+  return records.reduce((sum, r) => sum + (r.cost_usd ?? 0), 0);
 }
 
 export async function getStats(): Promise<UsageStats> {

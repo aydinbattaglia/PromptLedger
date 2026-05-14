@@ -1,6 +1,6 @@
 import { getStats } from '../storage/idb.js';
 import { BILLING_URLS } from '../plans/data.js';
-import { type CurrencyCode, formatCostSummary } from '../util/currency.js';
+import { type CurrencyCode, CURRENCY_META, convertUsd, formatCostSummary } from '../util/currency.js';
 
 const TOOLS = ['runway', 'elevenlabs', 'midjourney'] as const;
 type Tool = typeof TOOLS[number];
@@ -10,7 +10,7 @@ let exchangeRates: Record<string, number> = { USD: 1 };
 
 async function init(): Promise<void> {
   wireProjectEvents();
-  await Promise.all([loadCurrencySettings(), renderStats(), renderPlans(), renderProjects(), wirePause(), wireDashboard()]);
+  await Promise.all([loadCurrencySettings(), renderStats(), renderPlans(), renderProjects(), renderBudgets(), wirePause(), wireDashboard()]);
 }
 
 async function loadCurrencySettings(): Promise<void> {
@@ -199,6 +199,90 @@ function unitLabel(tool: string): string {
   if (tool === 'midjourney') return 'hr/$';
   if (tool === 'elevenlabs') return 'ch/$';
   return 'cr/$';
+}
+
+// ── Budget alerts ────────────────────────────────────────────────────────────
+
+async function renderBudgets(): Promise<void> {
+  const keys = TOOLS.flatMap((t) => [`budget_daily_${t}`, `budget_monthly_${t}`]);
+  const stored = await storageGet(keys);
+  const container = document.getElementById('budgets')!;
+  container.querySelectorAll('.budget-row, .budget-form').forEach((el) => el.remove());
+
+  for (const tool of TOOLS) {
+    const daily = stored[`budget_daily_${tool}`] as number | undefined;
+    const monthly = stored[`budget_monthly_${tool}`] as number | undefined;
+
+    const meta = CURRENCY_META[displayCurrency];
+    const rate = exchangeRates[displayCurrency] ?? 1;
+
+    const fmtLimit = (v: number | undefined) =>
+      v !== undefined && v > 0
+        ? `<span>${meta.symbol}${convertUsd(v, displayCurrency, exchangeRates).toFixed(meta.decimals)}</span>`
+        : '—';
+
+    const toDisplayVal = (usd: number | undefined) =>
+      usd !== undefined && usd > 0
+        ? (usd * rate).toFixed(meta.decimals)
+        : '';
+
+    const row = document.createElement('div');
+    row.className = 'budget-row';
+    row.innerHTML = `
+      <span class="budget-tool">${tool}</span>
+      <span class="budget-limits">D: ${fmtLimit(daily)} &nbsp; M: ${fmtLimit(monthly)}</span>
+      <button class="budget-edit">edit</button>`;
+
+    const form = document.createElement('div');
+    form.className = 'budget-form';
+    form.innerHTML = `
+      <span class="budget-form-tool">${tool}</span>
+      <div class="budget-input-row">
+        <span class="budget-label">Daily</span>
+        <span class="budget-prefix">${meta.symbol}</span>
+        <input class="budget-input" data-period="daily" type="number" min="0" step="any"
+               placeholder="no limit" value="${toDisplayVal(daily)}" />
+      </div>
+      <div class="budget-input-row">
+        <span class="budget-label">Monthly</span>
+        <span class="budget-prefix">${meta.symbol}</span>
+        <input class="budget-input" data-period="monthly" type="number" min="0" step="any"
+               placeholder="no limit" value="${toDisplayVal(monthly)}" />
+      </div>
+      <div class="budget-actions">
+        <button class="budget-save">Save</button>
+        <button class="budget-cancel">Cancel</button>
+      </div>`;
+
+    row.querySelector('.budget-edit')!.addEventListener('click', () => {
+      row.style.display = 'none';
+      form.classList.add('visible');
+      (form.querySelector('.budget-input') as HTMLInputElement).focus();
+    });
+
+    form.querySelector('.budget-save')!.addEventListener('click', async () => {
+      const inputs = form.querySelectorAll<HTMLInputElement>('.budget-input');
+      const vals: Record<string, unknown> = {};
+      for (const input of inputs) {
+        const period = input.dataset['period']!;
+        const raw = parseFloat(input.value);
+        // Always persist in USD so the service worker can compare against USD spend
+        vals[`budget_${period}_${tool}`] = isNaN(raw) || raw <= 0 ? null : raw / rate;
+      }
+      await storageSet(vals);
+      form.classList.remove('visible');
+      row.style.display = '';
+      await renderBudgets();
+    });
+
+    form.querySelector('.budget-cancel')!.addEventListener('click', () => {
+      form.classList.remove('visible');
+      row.style.display = '';
+    });
+
+    container.appendChild(row);
+    container.appendChild(form);
+  }
 }
 
 // ── Pause & dashboard ────────────────────────────────────────────────────────
