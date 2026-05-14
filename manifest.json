@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "PromptLedger",
+  "version": "0.1.0",
+  "description": "Per-prompt cost and usage tracking for AI creative tools",
+  "permissions": [
+    "storage",
+    "tabs",
+    "activeTab",
+    "notifications"
+  ],
+  "host_permissions": [
+    "*://*.runway.com/*",
+    "*://*.midjourney.com/*",
+    "*://*.elevenlabs.io/*"
+  ],
+  "background": {
+    "service_worker": "background/service-worker.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.runway.com/*",
+        "*://*.midjourney.com/*",
+        "*://*.elevenlabs.io/*"
+      ],
+      "js": ["inject/network-interceptor.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "*://*.runway.com/*",
+        "*://*.midjourney.com/*",
+        "*://*.elevenlabs.io/*"
+      ],
+      "js": ["content/index.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html"
+  }
+}
