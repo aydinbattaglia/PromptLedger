@@ -103,9 +103,6 @@ function renderSummary(): void {
 
 function renderTimeseries(): void {
   const canvas = document.getElementById('timeseries-chart') as HTMLCanvasElement;
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - chartDays);
-  cutoff.setHours(0, 0, 0, 0);
 
   const buckets = new Map<string, number>();
   for (let i = chartDays - 1; i >= 0; i--) {
@@ -149,7 +146,8 @@ function renderTimeseries(): void {
       }],
     },
     options: {
-      responsive: false,
+      responsive: true,
+      maintainAspectRatio: false,
       plugins: { legend: { display: false }, tooltip: {
         callbacks: { label: (ctx) => ` $${(ctx.raw as number).toFixed(2)}` },
       } },
@@ -168,12 +166,13 @@ function renderDonut(): void {
 
   const byTool = new Map<string, number>();
   for (const r of filteredRecords) {
-    byTool.set(r.tool, (byTool.get(r.tool) ?? 0) + (r.cost_usd ?? 0));
+    const cost = r.cost_usd ?? 0;
+    if (cost > 0) byTool.set(r.tool, (byTool.get(r.tool) ?? 0) + cost);
   }
 
-  const labels = [...byTool.keys()];
-  const data = [...byTool.values()];
-  const colors = labels.map((t) => TOOL_COLORS[t] ?? '#686878');
+  const labels = byTool.size > 0 ? [...byTool.keys()] : ['No data'];
+  const data = byTool.size > 0 ? [...byTool.values()] : [1];
+  const colors = byTool.size > 0 ? labels.map((t) => TOOL_COLORS[t] ?? '#686878') : ['#2e2e38'];
 
   if (donutChart) {
     donutChart.data.labels = labels;
@@ -195,7 +194,8 @@ function renderDonut(): void {
       }],
     },
     options: {
-      responsive: false,
+      responsive: true,
+      maintainAspectRatio: false,
       plugins: {
         legend: {
           position: 'bottom',
