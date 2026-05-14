@@ -404,6 +404,36 @@
       </div>
     </div>
 
+    <!-- ── Currency ── -->
+    <div class="section">
+      <div class="section-title">Currency conversion</div>
+      <p>By default all costs are displayed in US dollars (USD). You can switch to any of the ten supported currencies using the dropdown in the dashboard header:</p>
+      <p style="margin: 10px 0; color: #4c4c68;">
+        USD · EUR · GBP · JPY · CAD · AUD · CHF · CNY · INR · MXN
+      </p>
+
+      <h3>How rates are fetched</h3>
+      <p>Exchange rates are pulled from <strong>frankfurter.app</strong> (European Central Bank data) automatically in the background — once when you first install the extension and then every 24 hours via a scheduled alarm. No API key is required and no data about your usage is sent to the rate service.</p>
+      <p>If the fetch fails (e.g. you're offline), the most recently cached rates remain in use. The date rates were last updated is stored in <code>chrome.storage.local</code> as <code>exchange_rates_updated</code>.</p>
+
+      <h3>What gets converted</h3>
+      <p>Switching currency converts every cost display on the page immediately:</p>
+      <ul style="margin: 8px 0 8px 20px; color: #4c4c68; line-height: 1.9;">
+        <li>Summary cards (Total cost)</li>
+        <li>Daily spend chart — axes, tick labels, and hover tooltips</li>
+        <li>By-tool doughnut chart — tooltip amounts</li>
+        <li>Log table — Cost column</li>
+        <li>Popup — monthly cost and per-tool cost breakdown</li>
+      </ul>
+
+      <h3>Stored data stays in USD</h3>
+      <p>All records in IndexedDB are always saved with <code>cost_usd</code> in US dollars. Currency conversion is display-only — switching currencies never modifies your stored data. CSV exports also use USD so they remain consistent regardless of your display setting.</p>
+
+      <div class="callout callout-blue">
+        <p><strong>Preference is saved:</strong> your selected currency persists across sessions. The popup reads the same setting and converts its cost displays to match.</p>
+      </div>
+    </div>
+
     <!-- ── Pause ── -->
     <div class="section">
       <div class="section-title">Pausing tracking</div>
