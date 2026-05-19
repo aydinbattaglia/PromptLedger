@@ -387,6 +387,131 @@
     .page-btn:disabled { opacity: 0.3; cursor: default; }
     .page-btn.active { background: var(--btn-active-bg); color: var(--text); border-color: var(--btn-active-border); }
 
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+    .tab {
+      font-size: 13px;
+      padding: 10px 18px;
+      border: none;
+      border-bottom: 2px solid transparent;
+      background: transparent;
+      color: var(--text-3);
+      cursor: pointer;
+      margin-bottom: -1px;
+      transition: color 0.1s, border-color 0.1s;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 500; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Settings ── */
+    .settings-wrap { max-width: 700px; }
+    .settings-section { margin-bottom: 36px; }
+    .settings-section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-3);
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .settings-desc {
+      font-size: 12px;
+      color: var(--text-2);
+      margin-bottom: 14px;
+      line-height: 1.6;
+    }
+    .settings-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    /* Plan rows */
+    .splan-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border-sub);
+    }
+    .splan-row:last-child { border-bottom: none; }
+    .splan-tool {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: capitalize;
+      color: var(--white);
+      width: 90px;
+      flex-shrink: 0;
+    }
+    .splan-select {
+      flex: 1;
+      background: var(--input-bg);
+      border: 1px solid var(--btn-border);
+      border-radius: 5px;
+      color: var(--text);
+      font-size: 13px;
+      padding: 6px 10px;
+      outline: none;
+      cursor: pointer;
+    }
+    .splan-select:focus { border-color: var(--accent); }
+
+    /* Budget rows in settings */
+    .sbudget-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border-sub);
+    }
+    .sbudget-row:last-child { border-bottom: none; }
+    .sbudget-tool {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: capitalize;
+      color: var(--white);
+      width: 90px;
+      flex-shrink: 0;
+    }
+    .sbudget-limits { flex: 1; display: flex; gap: 24px; }
+    .sbudget-limit { display: flex; flex-direction: column; gap: 1px; }
+    .sbudget-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-3); }
+    .sbudget-val { font-size: 14px; font-variant-numeric: tabular-nums; color: var(--text); }
+
+    .sbudget-form {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 10px 18px;
+      border-bottom: 1px solid var(--border-sub);
+    }
+    .sbudget-form:last-child { border-bottom: none; }
+    .sbudget-form.visible { display: flex; }
+    .sbudget-form .sbudget-tool { flex-shrink: 0; }
+    .sbudget-pair { display: flex; align-items: center; gap: 5px; }
+    .sbudget-period-label { font-size: 11px; color: var(--text-3); }
+    .sbudget-prefix { font-size: 13px; color: var(--text-3); }
+    .sbudget-input {
+      width: 90px;
+      background: var(--input-bg);
+      border: 1px solid var(--btn-border);
+      border-radius: 5px;
+      color: var(--text);
+      font-size: 13px;
+      padding: 5px 10px;
+      outline: none;
+    }
+    .sbudget-input:focus { border-color: var(--accent); }
+
     /* ── Empty / loading states ── */
     .empty-state {
       text-align: center;
@@ -426,6 +551,12 @@
   </header>
 
   <main>
+    <div class="tabs">
+      <button class="tab active" data-tab="generations">Generations</button>
+      <button class="tab" data-tab="settings">Plans &amp; Settings</button>
+    </div>
+
+    <div id="tab-generations" class="tab-panel active">
     <!-- Filter bar -->
     <div class="filter-bar">
       <div class="filter-group">
@@ -516,6 +647,27 @@
       </div>
       <div class="pagination" id="pagination" style="display:none"></div>
     </div>
+    </div><!-- #tab-generations -->
+
+    <div id="tab-settings" class="tab-panel">
+      <div class="settings-wrap">
+        <section class="settings-section">
+          <div class="settings-section-title">Plan rates</div>
+          <p class="settings-desc">PromptLedger divides credits used by your plan rate to compute a dollar cost. Visit each tool's billing page to trigger auto-detection, or set the rate manually.</p>
+          <div class="settings-box" id="settings-plans">
+            <div class="loading">Loading…</div>
+          </div>
+        </section>
+        <section class="settings-section">
+          <div class="settings-section-title">Budget alerts</div>
+          <p class="settings-desc">Set daily and monthly spend limits per tool. Browser notifications fire at 80% and 100% of each limit. Amounts are shown in your selected display currency.</p>
+          <div class="settings-box" id="settings-budgets">
+            <div class="loading">Loading…</div>
+          </div>
+        </section>
+      </div>
+    </div><!-- #tab-settings -->
+
   </main>
 
   <script src="dashboard.js"></script>

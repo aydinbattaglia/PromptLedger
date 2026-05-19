@@ -11,6 +11,7 @@ interface DetectedPlan {
   tool: ToolId;
   plan_name: string;
   credits_per_dollar: number;
+  is_free?: boolean;
 }
 
 // ─── Runway ──────────────────────────────────────────────────────────────────
@@ -26,9 +27,9 @@ function detectRunway(): DetectedPlan | null {
 
   // Parse "2,250 credits" or "625 credits/month"
   const creditsM = text.match(/(\d[\d,]*)\s*credits?/i);
-  // Parse "$35/month" or "35 USD/month"
-  const costM = text.match(/\$\s*(\d+(?:\.\d+)?)\s*(?:\/\s*mo|per\s*mo)/i)
-    ?? text.match(/(\d+(?:\.\d+)?)\s*USD\s*\/\s*mo/i);
+  // Parse "$35/month", "$35/mo", "35 USD/month"
+  const costM = text.match(/\$\s*(\d+(?:\.\d+)?)\s*(?:\/\s*mo(?:nth)?|per\s*mo(?:nth)?)/i)
+    ?? text.match(/(\d+(?:\.\d+)?)\s*USD\s*\/\s*mo(?:nth)?/i);
 
   if (creditsM && costM) {
     const credits = parseInt(creditsM[1]!.replace(/,/g, ''), 10);
@@ -43,8 +44,12 @@ function detectRunway(): DetectedPlan | null {
   // Fallback: match plan name in page text
   const fullText = document.body.innerText.toLowerCase();
   for (const [key, plan] of Object.entries(KNOWN_PLANS['runway'] ?? {})) {
-    if (fullText.includes(key) && plan.credits_per_dollar > 0) {
+    if (!fullText.includes(key)) continue;
+    if (plan.credits_per_dollar > 0) {
       return { tool: 'runway', plan_name: plan.plan_name, credits_per_dollar: plan.credits_per_dollar };
+    }
+    if (plan.monthly_cost_usd === 0) {
+      return { tool: 'runway', plan_name: plan.plan_name, credits_per_dollar: 0, is_free: true };
     }
   }
 
@@ -60,15 +65,15 @@ function detectElevenLabs(): DetectedPlan | null {
   const root = activeCard ?? document.body;
   const text = (root as HTMLElement).innerText ?? '';
 
-  // Parse "30,000 characters/month" or "30k characters"
-  const charsM = text.match(/(\d[\d,]*)\s*(?:k\s*)?characters?/i);
-  const kM = !charsM && text.match(/(\d+)k\s*chars?/i);
-  const costM = text.match(/\$\s*(\d+(?:\.\d+)?)\s*(?:\/\s*mo|per\s*mo)/i);
+  // Parse "30,000 characters/month", "30k characters", or "30k chars"
+  const charsKM = text.match(/(\d+(?:\.\d+)?)\s*k\s*(?:characters?|chars?)/i);
+  const charsM = !charsKM && text.match(/(\d[\d,]*)\s*characters?/i);
+  const costM = text.match(/\$\s*(\d+(?:\.\d+)?)\s*(?:\/\s*mo(?:nth)?|per\s*mo(?:nth)?)/i);
 
-  const chars = charsM
+  const chars = charsKM
+    ? Math.round(parseFloat(charsKM[1]!) * 1_000)
+    : charsM
     ? parseInt(charsM[1]!.replace(/,/g, ''), 10)
-    : kM
-    ? parseInt(kM[1]!, 10) * 1_000
     : 0;
 
   if (chars > 0 && costM) {
@@ -82,8 +87,12 @@ function detectElevenLabs(): DetectedPlan | null {
 
   const fullText = document.body.innerText.toLowerCase();
   for (const [key, plan] of Object.entries(KNOWN_PLANS['elevenlabs'] ?? {})) {
-    if (fullText.includes(key) && plan.credits_per_dollar > 0) {
+    if (!fullText.includes(key)) continue;
+    if (plan.credits_per_dollar > 0) {
       return { tool: 'elevenlabs', plan_name: plan.plan_name, credits_per_dollar: plan.credits_per_dollar };
+    }
+    if (plan.monthly_cost_usd === 0) {
+      return { tool: 'elevenlabs', plan_name: plan.plan_name, credits_per_dollar: 0, is_free: true };
     }
   }
 
@@ -102,7 +111,7 @@ function detectMidjourney(): DetectedPlan | null {
   // Parse "15 fast GPU hours/month" or "15 hr"
   const hrsM = text.match(/(\d+(?:\.\d+)?)\s*(?:fast\s*)?(?:GPU\s*)?hours?/i)
     ?? text.match(/(\d+(?:\.\d+)?)\s*hr/i);
-  const costM = text.match(/\$\s*(\d+(?:\.\d+)?)\s*(?:\/\s*mo|per\s*mo)/i);
+  const costM = text.match(/\$\s*(\d+(?:\.\d+)?)\s*(?:\/\s*mo(?:nth)?|per\s*mo(?:nth)?)/i);
 
   if (hrsM && costM) {
     const hours = parseFloat(hrsM[1]!);
@@ -134,15 +143,25 @@ function detect(): DetectedPlan | null {
   return null;
 }
 
-// Run after DOM settles; billing pages are SSR so content is ready at document_idle
-const plan = detect();
-
-if (plan) {
+function savePlan(plan: DetectedPlan): void {
   chrome.storage.local.set({
-    [`plan_rate_${plan.tool}`]: plan.credits_per_dollar,
+    [`plan_rate_${plan.tool}`]: plan.is_free ? null : plan.credits_per_dollar,
     [`plan_name_${plan.tool}`]: plan.plan_name,
     [`plan_override_${plan.tool}`]: false,
+    [`plan_is_free_${plan.tool}`]: plan.is_free ?? false,
     [`plan_detected_at_${plan.tool}`]: new Date().toISOString(),
   });
-  console.debug(`[PromptLedger] Detected plan: ${plan.tool} ${plan.plan_name} (${plan.credits_per_dollar} cr/$)`);
+  console.debug(`[PromptLedger] Detected plan: ${plan.tool} ${plan.plan_name}${plan.is_free ? ' (free)' : ` (${plan.credits_per_dollar} cr/$)`}`);
+}
+
+// Run after DOM settles. SPA billing pages (Runway, Midjourney) may still be
+// fetching user data at document_idle, so retry once after 2 s if first pass fails.
+const initial = detect();
+if (initial) {
+  savePlan(initial);
+} else {
+  setTimeout(() => {
+    const retried = detect();
+    if (retried) savePlan(retried);
+  }, 2000);
 }

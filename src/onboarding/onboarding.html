@@ -113,13 +113,10 @@
       background: #fff;
       border: 1px solid #dcdce8;
       border-radius: 10px;
-      padding: 16px 20px;
-    }
-
-    .tool-card-top {
+      padding: 14px 20px;
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
     }
 
     .tool-name {
@@ -127,87 +124,22 @@
       font-weight: 600;
       color: #1c1c2e;
       text-transform: capitalize;
-      flex: 1;
-    }
-
-    .status-badge {
-      font-size: 11px;
-      font-weight: 500;
-      padding: 3px 9px;
-      border-radius: 20px;
-      white-space: nowrap;
-    }
-    .status-badge.unset {
-      background: #f0f0f6;
-      color: #808098;
-    }
-    .status-badge.detected {
-      background: #e6f5ec;
-      color: #1a7a38;
-    }
-    .status-badge.custom {
-      background: #eeeeff;
-      color: #4040c0;
-    }
-
-    .billing-link {
-      font-size: 12px;
-      color: #4f4fd4;
-      text-decoration: none;
-      white-space: nowrap;
-    }
-    .billing-link:hover { text-decoration: underline; }
-
-    .manual-toggle {
-      font-size: 12px;
-      background: none;
-      border: none;
-      color: #808098;
-      cursor: pointer;
-      padding: 0;
-      margin-top: 10px;
-      display: block;
-    }
-    .manual-toggle:hover { color: #4f4fd4; }
-
-    .manual-form {
-      display: none;
-      align-items: center;
-      gap: 8px;
-      margin-top: 10px;
-      padding-top: 10px;
-      border-top: 1px solid #eeeef6;
-    }
-    .manual-form.visible { display: flex; }
-
-    .manual-form input {
       width: 90px;
+      flex-shrink: 0;
+    }
+
+    .plan-select {
+      flex: 1;
       background: #f4f4f8;
       border: 1px solid #c8c8dc;
-      border-radius: 5px;
+      border-radius: 6px;
       color: #1c1c2e;
-      font-size: 12px;
-      padding: 5px 8px;
+      font-size: 13px;
+      padding: 7px 10px;
       outline: none;
-    }
-    .manual-form input:focus { border-color: #4f4fd4; }
-
-    .manual-unit {
-      font-size: 11px;
-      color: #808098;
-      flex: 1;
-    }
-
-    .save-btn {
-      font-size: 12px;
-      padding: 5px 12px;
-      border-radius: 5px;
-      border: 1px solid #4f4fd4;
-      background: transparent;
-      color: #4f4fd4;
       cursor: pointer;
     }
-    .save-btn:hover { background: #4f4fd4; color: #fff; }
+    .plan-select:focus { border-color: #4f4fd4; }
 
     /* ── CTA ── */
     .cta {
@@ -270,7 +202,7 @@
       <div class="step">
         <div class="step-num">Step 1</div>
         <div class="step-title">Set up your plans</div>
-        <div class="step-desc">Visit your billing page on each tool — PromptLedger will detect your plan automatically.</div>
+        <div class="step-desc">Select your current plan for each tool below so PromptLedger can calculate generation costs.</div>
       </div>
       <div class="step">
         <div class="step-num">Step 2</div>

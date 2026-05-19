@@ -25,7 +25,7 @@ const SEL = {
 } as const;
 
 // Parse GPU hours from display strings like "14.7 hr", "14 hr 42 min", "876 min"
-function parseGpuHours(text: string): number {
+export function parseGpuHours(text: string): number {
   text = text.trim();
   // "X hr Y min"
   const hrMin = text.match(/(\d+(?:\.\d+)?)\s*hr\s*(\d+)\s*min/i);

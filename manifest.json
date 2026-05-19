@@ -13,6 +13,7 @@
   "host_permissions": [
     "*://*.runwayml.com/*",
     "*://*.midjourney.com/*",
+    "*://elevenlabs.io/*",
     "*://*.elevenlabs.io/*",
     "https://api.frankfurter.app/*"
   ],
@@ -25,6 +26,7 @@
       "matches": [
         "*://*.runwayml.com/*",
         "*://*.midjourney.com/*",
+        "*://elevenlabs.io/*",
         "*://*.elevenlabs.io/*"
       ],
       "js": ["inject/network-interceptor.js"],
@@ -35,22 +37,11 @@
       "matches": [
         "*://*.runwayml.com/*",
         "*://*.midjourney.com/*",
+        "*://elevenlabs.io/*",
         "*://*.elevenlabs.io/*"
       ],
       "js": ["content/index.js"],
       "run_at": "document_start"
-    },
-    {
-      "matches": [
-        "*://app.runwayml.com/settings*",
-        "*://app.runwayml.com/account*",
-        "*://elevenlabs.io/subscription*",
-        "*://elevenlabs.io/settings*",
-        "*://www.midjourney.com/account*",
-        "*://midjourney.com/account*"
-      ],
-      "js": ["plans/detector.js"],
-      "run_at": "document_idle"
     }
   ],
   "icons": {

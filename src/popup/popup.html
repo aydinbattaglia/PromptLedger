@@ -7,12 +7,43 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    :root {
+      --bg:         #f4f4f8;
+      --surface:    #ffffff;
+      --raised:     #ebebf2;
+      --border:     #dcdce8;
+      --border-sub: #e8e8f2;
+      --text:       #1c1c2e;
+      --text-2:     #4c4c68;
+      --text-3:     #808098;
+      --text-4:     #686888;
+      --white:      #1c1c2e;
+      --accent:     #4f4fd4;
+      --btn-border: #c4c4d8;
+      --input-bg:   #ebebf2;
+    }
+    :root[data-theme="dark"] {
+      --bg:         #0f0f11;
+      --surface:    #141418;
+      --raised:     #1a1a22;
+      --border:     #1e1e24;
+      --border-sub: #1a1a20;
+      --text:       #e2e2e8;
+      --text-2:     #b0b0c0;
+      --text-3:     #686878;
+      --text-4:     #9898a8;
+      --white:      #ffffff;
+      --accent:     #7c7cff;
+      --btn-border: #2e2e38;
+      --input-bg:   #1a1a22;
+    }
+
     body {
       width: 320px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       font-size: 13px;
-      background: #0f0f11;
-      color: #e2e2e8;
+      background: var(--bg);
+      color: var(--text);
     }
 
     header {
@@ -20,33 +51,33 @@
       align-items: center;
       justify-content: space-between;
       padding: 14px 16px 12px;
-      border-bottom: 1px solid #1e1e24;
+      border-bottom: 1px solid var(--border);
     }
 
     h1 {
       font-size: 14px;
       font-weight: 600;
       letter-spacing: -0.01em;
-      color: #fff;
+      color: var(--white);
     }
 
     #pause-btn {
       font-size: 11px;
       padding: 3px 10px;
       border-radius: 4px;
-      border: 1px solid #2e2e38;
+      border: 1px solid var(--btn-border);
       background: transparent;
-      color: #9898a8;
+      color: var(--text-4);
       cursor: pointer;
     }
-    #pause-btn:hover { background: #1e1e24; color: #e2e2e8; }
+    #pause-btn:hover { background: var(--raised); color: var(--text); }
 
     .stats {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
       gap: 1px;
-      background: #1e1e24;
-      border-bottom: 1px solid #1e1e24;
+      background: var(--border);
+      border-bottom: 1px solid var(--border);
     }
 
     .stat {
@@ -54,26 +85,26 @@
       flex-direction: column;
       gap: 4px;
       padding: 14px 12px;
-      background: #0f0f11;
+      background: var(--bg);
     }
 
     .stat .label {
       font-size: 10px;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      color: #686878;
+      color: var(--text-3);
     }
 
     .stat .value {
       font-size: 15px;
       font-weight: 600;
-      color: #fff;
+      color: var(--white);
       font-variant-numeric: tabular-nums;
     }
 
     #by-tool {
       padding: 12px 16px;
-      border-bottom: 1px solid #1e1e24;
+      border-bottom: 1px solid var(--border);
     }
 
     .tool-row {
@@ -81,17 +112,17 @@
       justify-content: space-between;
       align-items: center;
       padding: 6px 0;
-      border-bottom: 1px solid #1a1a20;
-      color: #b0b0c0;
+      border-bottom: 1px solid var(--border-sub);
+      color: var(--text-2);
     }
     .tool-row:last-child { border-bottom: none; }
     .tool-name { text-transform: capitalize; }
-    .tool-cost { font-variant-numeric: tabular-nums; color: #e2e2e8; }
+    .tool-cost { font-variant-numeric: tabular-nums; color: var(--text); }
 
     .empty-state {
       padding: 20px 16px;
       text-align: center;
-      color: #686878;
+      color: var(--text-3);
       font-size: 12px;
       line-height: 1.6;
     }
@@ -99,7 +130,7 @@
     /* ── Projects section ── */
     #projects {
       padding: 10px 16px 14px;
-      border-bottom: 1px solid #1e1e24;
+      border-bottom: 1px solid var(--border);
     }
 
     .project-row {
@@ -110,15 +141,15 @@
 
     #project-select {
       flex: 1;
-      background: #1e1e24;
-      border: 1px solid #2e2e38;
+      background: var(--input-bg);
+      border: 1px solid var(--btn-border);
       border-radius: 4px;
-      color: #e2e2e8;
+      color: var(--text);
       font-size: 12px;
       padding: 4px 8px;
       outline: none;
     }
-    #project-select:focus { border-color: #7c7cff; }
+    #project-select:focus { border-color: var(--accent); }
 
     #new-proj-btn {
       font-size: 15px;
@@ -126,12 +157,12 @@
       width: 24px;
       height: 24px;
       border-radius: 4px;
-      border: 1px solid #2e2e38;
+      border: 1px solid var(--btn-border);
       background: transparent;
-      color: #9898a8;
+      color: var(--text-4);
       cursor: pointer;
     }
-    #new-proj-btn:hover { background: #1e1e24; color: #e2e2e8; }
+    #new-proj-btn:hover { background: var(--raised); color: var(--text); }
 
     .project-form {
       display: none;
@@ -143,48 +174,48 @@
 
     .proj-input {
       flex: 1;
-      background: #1e1e24;
-      border: 1px solid #2e2e38;
+      background: var(--input-bg);
+      border: 1px solid var(--btn-border);
       border-radius: 4px;
-      color: #e2e2e8;
+      color: var(--text);
       font-size: 12px;
       padding: 4px 8px;
       outline: none;
     }
-    .proj-input:focus { border-color: #7c7cff; }
+    .proj-input:focus { border-color: var(--accent); }
 
     .proj-save {
       font-size: 11px;
       padding: 3px 8px;
       border-radius: 4px;
-      border: 1px solid #7c7cff;
+      border: 1px solid var(--accent);
       background: transparent;
-      color: #7c7cff;
+      color: var(--accent);
       cursor: pointer;
     }
-    .proj-save:hover { background: #7c7cff; color: #fff; }
+    .proj-save:hover { background: var(--accent); color: var(--surface); }
 
     .proj-cancel {
       font-size: 11px;
       background: none;
       border: none;
-      color: #686878;
+      color: var(--text-3);
       cursor: pointer;
       padding: 0 2px;
     }
-    .proj-cancel:hover { color: #e2e2e8; }
+    .proj-cancel:hover { color: var(--text); }
 
     /* ── Plans section ── */
     #plans {
       padding: 10px 16px 14px;
-      border-bottom: 1px solid #1e1e24;
+      border-bottom: 1px solid var(--border);
     }
 
     .section-label {
       font-size: 10px;
       text-transform: uppercase;
       letter-spacing: 0.06em;
-      color: #686878;
+      color: var(--text-3);
       margin-bottom: 8px;
     }
 
@@ -193,87 +224,35 @@
       align-items: center;
       gap: 8px;
       padding: 5px 0;
-      border-bottom: 1px solid #1a1a20;
+      border-bottom: 1px solid var(--border-sub);
     }
     .plan-row:last-child { border-bottom: none; }
 
     .plan-tool {
       text-transform: capitalize;
-      color: #b0b0c0;
+      color: var(--text-2);
       width: 76px;
       flex-shrink: 0;
     }
 
-    .plan-status {
+    .plan-select {
       flex: 1;
-      color: #e2e2e8;
-      font-variant-numeric: tabular-nums;
-    }
-    .plan-status.unset { color: #686878; font-style: italic; }
-
-    .plan-action {
-      font-size: 11px;
-      color: #7c7cff;
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: 0;
-      text-decoration: none;
-      white-space: nowrap;
-    }
-    .plan-action:hover { text-decoration: underline; }
-
-    /* Inline override form */
-    .plan-form {
-      display: none;
-      align-items: center;
-      gap: 6px;
-      padding: 5px 0;
-      border-bottom: 1px solid #1a1a20;
-    }
-    .plan-form:last-child { border-bottom: none; }
-    .plan-form.visible { display: flex; }
-
-    .plan-form .plan-tool { width: 76px; flex-shrink: 0; }
-
-    .plan-input {
-      width: 72px;
-      background: #1e1e24;
-      border: 1px solid #2e2e38;
+      background: var(--input-bg);
+      border: 1px solid var(--btn-border);
       border-radius: 4px;
-      color: #e2e2e8;
-      font-size: 12px;
+      color: var(--text);
+      font-size: 11px;
       padding: 3px 6px;
-    }
-    .plan-input:focus { outline: none; border-color: #7c7cff; }
-
-    .plan-unit { font-size: 11px; color: #686878; }
-
-    .plan-save {
-      font-size: 11px;
-      padding: 3px 8px;
-      border-radius: 4px;
-      border: 1px solid #7c7cff;
-      background: transparent;
-      color: #7c7cff;
+      outline: none;
       cursor: pointer;
+      min-width: 0;
     }
-    .plan-save:hover { background: #7c7cff; color: #fff; }
-
-    .plan-cancel {
-      font-size: 11px;
-      background: none;
-      border: none;
-      color: #686878;
-      cursor: pointer;
-      padding: 0 2px;
-    }
-    .plan-cancel:hover { color: #e2e2e8; }
+    .plan-select:focus { border-color: var(--accent); }
 
     /* ── Budget section ── */
     #budgets {
       padding: 10px 16px 14px;
-      border-bottom: 1px solid #1e1e24;
+      border-bottom: 1px solid var(--border);
     }
 
     .budget-row {
@@ -281,13 +260,13 @@
       align-items: center;
       gap: 6px;
       padding: 5px 0;
-      border-bottom: 1px solid #1a1a20;
+      border-bottom: 1px solid var(--border-sub);
     }
     .budget-row:last-child { border-bottom: none; }
 
     .budget-tool {
       text-transform: capitalize;
-      color: #b0b0c0;
+      color: var(--text-2);
       width: 76px;
       flex-shrink: 0;
     }
@@ -295,14 +274,14 @@
     .budget-limits {
       flex: 1;
       font-size: 12px;
-      color: #686878;
+      color: var(--text-3);
       font-variant-numeric: tabular-nums;
     }
-    .budget-limits span { color: #e2e2e8; }
+    .budget-limits span { color: var(--text); }
 
     .budget-edit {
       font-size: 11px;
-      color: #7c7cff;
+      color: var(--accent);
       background: none;
       border: none;
       cursor: pointer;
@@ -316,7 +295,7 @@
       flex-direction: column;
       gap: 6px;
       padding: 6px 0;
-      border-bottom: 1px solid #1a1a20;
+      border-bottom: 1px solid var(--border-sub);
     }
     .budget-form:last-child { border-bottom: none; }
     .budget-form.visible { display: flex; }
@@ -324,7 +303,7 @@
     .budget-form-tool {
       font-size: 12px;
       text-transform: capitalize;
-      color: #b0b0c0;
+      color: var(--text-2);
       font-weight: 600;
     }
 
@@ -336,30 +315,30 @@
 
     .budget-label {
       font-size: 11px;
-      color: #686878;
+      color: var(--text-3);
       width: 46px;
       flex-shrink: 0;
     }
 
     .budget-prefix {
       font-size: 12px;
-      color: #686878;
+      color: var(--text-3);
     }
 
     .budget-input {
       width: 64px;
-      background: #1e1e24;
-      border: 1px solid #2e2e38;
+      background: var(--input-bg);
+      border: 1px solid var(--btn-border);
       border-radius: 4px;
-      color: #e2e2e8;
+      color: var(--text);
       font-size: 12px;
       padding: 3px 6px;
     }
-    .budget-input:focus { outline: none; border-color: #7c7cff; }
+    .budget-input:focus { outline: none; border-color: var(--accent); }
 
     .budget-hint {
       font-size: 10px;
-      color: #686878;
+      color: var(--text-3);
       margin-left: 4px;
     }
 
@@ -373,22 +352,22 @@
       font-size: 11px;
       padding: 3px 8px;
       border-radius: 4px;
-      border: 1px solid #7c7cff;
+      border: 1px solid var(--accent);
       background: transparent;
-      color: #7c7cff;
+      color: var(--accent);
       cursor: pointer;
     }
-    .budget-save:hover { background: #7c7cff; color: #fff; }
+    .budget-save:hover { background: var(--accent); color: var(--surface); }
 
     .budget-cancel {
       font-size: 11px;
       background: none;
       border: none;
-      color: #686878;
+      color: var(--text-3);
       cursor: pointer;
       padding: 0 2px;
     }
-    .budget-cancel:hover { color: #e2e2e8; }
+    .budget-cancel:hover { color: var(--text); }
 
     footer {
       padding: 12px 16px;
@@ -397,7 +376,7 @@
 
     footer a {
       font-size: 12px;
-      color: #7c7cff;
+      color: var(--accent);
       text-decoration: none;
     }
     footer a:hover { text-decoration: underline; }

@@ -1,5 +1,5 @@
 import { getStats } from '../storage/idb.js';
-import { BILLING_URLS } from '../plans/data.js';
+import { KNOWN_PLANS, planOptionLabel } from '../plans/data.js';
 import { type CurrencyCode, CURRENCY_META, convertUsd, formatCostSummary } from '../util/currency.js';
 
 const TOOLS = ['runway', 'elevenlabs', 'midjourney'] as const;
@@ -9,6 +9,12 @@ let displayCurrency: CurrencyCode = 'USD';
 let exchangeRates: Record<string, number> = { USD: 1 };
 
 async function init(): Promise<void> {
+  // Apply theme before rendering to avoid flash
+  if (localStorage.getItem('pl-theme') === 'dark') {
+    document.documentElement.dataset['theme'] = 'dark';
+  } else if (localStorage.getItem('pl-theme') === 'light') {
+    delete document.documentElement.dataset['theme'];
+  }
   wireProjectEvents();
   await Promise.all([loadCurrencySettings(), renderStats(), renderPlans(), renderProjects(), renderBudgets(), wirePause(), wireDashboard()]);
 }
@@ -104,101 +110,65 @@ function wireProjectEvents(): void {
 // ── Plans ────────────────────────────────────────────────────────────────────
 
 async function renderPlans(): Promise<void> {
-  const keys = TOOLS.flatMap((t) => [
-    `plan_rate_${t}`, `plan_name_${t}`, `plan_override_${t}`,
-  ]);
-
+  const keys = TOOLS.flatMap((t) => [`plan_key_${t}`]);
   const stored = await storageGet(keys);
   const container = document.getElementById('plans')!;
-  // Remove existing rows (keep the label)
-  container.querySelectorAll('.plan-row, .plan-form').forEach((el) => el.remove());
+  container.querySelectorAll('.plan-row').forEach((el) => el.remove());
 
   for (const tool of TOOLS) {
-    const rate = stored[`plan_rate_${tool}`] as number | undefined;
-    const name = stored[`plan_name_${tool}`] as string | undefined;
-    const override = stored[`plan_override_${tool}`] as boolean | undefined;
+    const currentKey = stored[`plan_key_${tool}`] as string | undefined;
 
     const row = document.createElement('div');
     row.className = 'plan-row';
-    row.dataset['tool'] = tool;
 
-    const form = document.createElement('div');
-    form.className = 'plan-form';
-    form.dataset['tool'] = tool;
+    const label = document.createElement('span');
+    label.className = 'plan-tool';
+    label.textContent = tool;
 
-    if (rate !== undefined && rate > 0) {
-      const label = override ? 'custom' : (name ?? 'detected');
-      const display = formatRate(tool, rate);
-      row.innerHTML = `
-        <span class="plan-tool">${tool}</span>
-        <span class="plan-status">${label} · ${display}</span>
-        <button class="plan-action edit-btn">edit</button>`;
-    } else {
-      const billingUrl = BILLING_URLS[tool] ?? '#';
-      row.innerHTML = `
-        <span class="plan-tool">${tool}</span>
-        <span class="plan-status unset">not set up</span>
-        <a class="plan-action" href="${billingUrl}" target="_blank">Set up ↗</a>`;
+    const select = document.createElement('select');
+    select.className = 'plan-select';
+
+    const defaultOpt = document.createElement('option');
+    defaultOpt.value = '';
+    defaultOpt.textContent = '— not set —';
+    select.appendChild(defaultOpt);
+
+    for (const key of Object.keys(KNOWN_PLANS[tool] ?? {})) {
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = planOptionLabel(tool, key);
+      select.appendChild(opt);
     }
 
-    form.innerHTML = `
-      <span class="plan-tool">${tool}</span>
-      <input class="plan-input" type="number" min="0" step="any"
-             placeholder="${formatRatePlaceholder(tool)}"
-             value="${rate && rate > 0 ? rate : ''}"/>
-      <span class="plan-unit">${unitLabel(tool)}</span>
-      <button class="plan-save">Save</button>
-      <button class="plan-cancel">✕</button>`;
+    if (currentKey) select.value = currentKey;
 
-    // Wire edit toggle
-    row.querySelector('.edit-btn')?.addEventListener('click', () => {
-      row.style.display = 'none';
-      form.classList.add('visible');
-      (form.querySelector('.plan-input') as HTMLInputElement)?.focus();
-    });
-
-    // Wire save
-    form.querySelector('.plan-save')?.addEventListener('click', async () => {
-      const val = parseFloat((form.querySelector('.plan-input') as HTMLInputElement).value);
-      if (isNaN(val) || val < 0) return;
+    select.addEventListener('change', async () => {
+      const key = select.value;
+      if (!key) {
+        await storageSet({
+          [`plan_key_${tool}`]: null,
+          [`plan_rate_${tool}`]: null,
+          [`plan_name_${tool}`]: null,
+          [`plan_is_free_${tool}`]: false,
+          [`plan_override_${tool}`]: false,
+        });
+        return;
+      }
+      const plan = KNOWN_PLANS[tool]?.[key];
+      if (!plan) return;
       await storageSet({
-        [`plan_rate_${tool}`]: val,
-        [`plan_name_${tool}`]: name ?? 'Custom',
-        [`plan_override_${tool}`]: true,
+        [`plan_key_${tool}`]: key,
+        [`plan_rate_${tool}`]: plan.credits_per_dollar > 0 ? plan.credits_per_dollar : null,
+        [`plan_name_${tool}`]: plan.plan_name,
+        [`plan_is_free_${tool}`]: plan.monthly_cost_usd === 0,
+        [`plan_override_${tool}`]: false,
       });
-      form.classList.remove('visible');
-      row.style.display = '';
-      // Re-render plans to reflect new value
-      renderPlans();
     });
 
-    // Wire cancel
-    form.querySelector('.plan-cancel')?.addEventListener('click', () => {
-      form.classList.remove('visible');
-      row.style.display = '';
-    });
-
+    row.appendChild(label);
+    row.appendChild(select);
     container.appendChild(row);
-    container.appendChild(form);
   }
-}
-
-function formatRate(tool: string, rate: number): string {
-  if (tool === 'midjourney') return `${rate.toFixed(2)} hr/$`;
-  if (tool === 'elevenlabs') return `${Math.round(rate).toLocaleString()} ch/$`;
-  return `${Math.round(rate)} cr/$`;
-}
-
-function formatRatePlaceholder(tool: string): string {
-  if (tool === 'midjourney') return 'e.g. 0.5';
-  if (tool === 'elevenlabs') return 'e.g. 6000';
-  return 'e.g. 64';
-}
-
-function unitLabel(tool: string): string {
-  if (tool === 'midjourney') return 'hr/$';
-  if (tool === 'elevenlabs') return 'ch/$';
-  return 'cr/$';
 }
 
 // ── Budget alerts ────────────────────────────────────────────────────────────

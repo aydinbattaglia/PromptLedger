@@ -1,36 +1,17 @@
-import { BILLING_URLS } from '../plans/data.js';
+import { KNOWN_PLANS, planOptionLabel } from '../plans/data.js';
 
 const TOOLS = ['runway', 'midjourney', 'elevenlabs'] as const;
 type Tool = typeof TOOLS[number];
 
-const UNIT_LABEL: Record<Tool, string> = {
-  runway: 'cr/$',
-  midjourney: 'hr/$',
-  elevenlabs: 'ch/$',
-};
-
-const PLACEHOLDER: Record<Tool, string> = {
-  runway: 'e.g. 64',
-  midjourney: 'e.g. 0.5',
-  elevenlabs: 'e.g. 6000',
-};
-
-// ── Storage helpers ───────────────────────────────────────────────────────────
-
 function storageGet(keys: string[]): Promise<Record<string, unknown>> {
   return new Promise((resolve) => chrome.storage.local.get(keys, resolve));
 }
-
 function storageSet(items: Record<string, unknown>): Promise<void> {
   return new Promise((resolve) => chrome.storage.local.set(items, resolve));
 }
 
-// ── Render ────────────────────────────────────────────────────────────────────
-
 async function render(): Promise<void> {
-  const keys = TOOLS.flatMap((t) => [
-    `plan_rate_${t}`, `plan_name_${t}`, `plan_override_${t}`,
-  ]);
+  const keys = TOOLS.flatMap((t) => [`plan_key_${t}`]);
   const stored = await storageGet(keys);
 
   const container = document.getElementById('tool-cards')!;
@@ -39,84 +20,64 @@ async function render(): Promise<void> {
   let anySet = false;
 
   for (const tool of TOOLS) {
-    const rate = stored[`plan_rate_${tool}`] as number | undefined;
-    const name = stored[`plan_name_${tool}`] as string | undefined;
-    const override = stored[`plan_override_${tool}`] as boolean | undefined;
-    const isSet = rate !== undefined && rate > 0;
-    if (isSet) anySet = true;
+    const currentKey = stored[`plan_key_${tool}`] as string | undefined;
+    if (currentKey) anySet = true;
 
     const card = document.createElement('div');
     card.className = 'tool-card';
 
-    const statusClass = !isSet ? 'unset' : override ? 'custom' : 'detected';
-    const statusText = !isSet
-      ? 'Not set up'
-      : override
-        ? `Custom · ${formatRate(tool, rate!)}`
-        : `Detected · ${name ?? ''} · ${formatRate(tool, rate!)}`;
+    const select = document.createElement('select');
+    select.className = 'plan-select';
 
-    const billingUrl = BILLING_URLS[tool] ?? '#';
+    const defaultOpt = document.createElement('option');
+    defaultOpt.value = '';
+    defaultOpt.textContent = '— Select your plan —';
+    select.appendChild(defaultOpt);
 
-    card.innerHTML = `
-      <div class="tool-card-top">
-        <span class="tool-name">${tool}</span>
-        <span class="status-badge ${statusClass}" data-status="${tool}">${statusText}</span>
-        <a class="billing-link" href="${billingUrl}" target="_blank">Visit billing ↗</a>
-      </div>
-      <button class="manual-toggle" data-toggle="${tool}">Set rate manually</button>
-      <div class="manual-form" data-form="${tool}">
-        <input type="number" min="0" step="any"
-               placeholder="${PLACEHOLDER[tool]}"
-               value="${isSet ? rate! : ''}"
-               data-input="${tool}" />
-        <span class="manual-unit">${UNIT_LABEL[tool]}</span>
-        <button class="save-btn" data-save="${tool}">Save</button>
-      </div>`;
+    for (const key of Object.keys(KNOWN_PLANS[tool] ?? {})) {
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = planOptionLabel(tool, key);
+      select.appendChild(opt);
+    }
 
-    // Toggle manual form
-    card.querySelector(`[data-toggle="${tool}"]`)!.addEventListener('click', () => {
-      const form = card.querySelector(`[data-form="${tool}"]`) as HTMLElement;
-      form.classList.toggle('visible');
-    });
+    if (currentKey) select.value = currentKey;
 
-    // Save rate
-    card.querySelector(`[data-save="${tool}"]`)!.addEventListener('click', () =>
-      void saveRate(tool, card),
-    );
+    select.addEventListener('change', () => void onPlanSelect(tool, select.value));
 
-    // Save on Enter
-    (card.querySelector(`[data-input="${tool}"]`) as HTMLInputElement)
-      .addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') void saveRate(tool, card);
-      });
-
+    card.innerHTML = `<span class="tool-name">${tool}</span>`;
+    card.appendChild(select);
     container.appendChild(card);
   }
 
   updateCta(anySet);
 }
 
-async function saveRate(tool: Tool, card: HTMLElement): Promise<void> {
-  const input = card.querySelector(`[data-input="${tool}"]`) as HTMLInputElement;
-  const val = parseFloat(input.value);
-  if (isNaN(val) || val <= 0) return;
+async function onPlanSelect(tool: Tool, key: string): Promise<void> {
+  if (!key) {
+    await storageSet({
+      [`plan_key_${tool}`]: null,
+      [`plan_rate_${tool}`]: null,
+      [`plan_name_${tool}`]: null,
+      [`plan_is_free_${tool}`]: false,
+      [`plan_override_${tool}`]: false,
+    });
+  } else {
+    const plan = KNOWN_PLANS[tool]?.[key];
+    if (!plan) return;
+    await storageSet({
+      [`plan_key_${tool}`]: key,
+      [`plan_rate_${tool}`]: plan.credits_per_dollar > 0 ? plan.credits_per_dollar : null,
+      [`plan_name_${tool}`]: plan.plan_name,
+      [`plan_is_free_${tool}`]: plan.monthly_cost_usd === 0,
+      [`plan_override_${tool}`]: false,
+    });
+  }
 
-  await storageSet({
-    [`plan_rate_${tool}`]: val,
-    [`plan_name_${tool}`]: 'Custom',
-    [`plan_override_${tool}`]: true,
-  });
-
-  // Update status badge in place
-  const badge = card.querySelector(`[data-status="${tool}"]`) as HTMLElement;
-  badge.className = 'status-badge custom';
-  badge.textContent = `Custom · ${formatRate(tool, val)}`;
-
-  // Hide form
-  const form = card.querySelector(`[data-form="${tool}"]`) as HTMLElement;
-  form.classList.remove('visible');
-
-  updateCta(true);
+  const keys = TOOLS.map((t) => `plan_key_${t}`);
+  const stored = await storageGet(keys);
+  const anySet = TOOLS.some((t) => !!stored[`plan_key_${t}`]);
+  updateCta(anySet);
 }
 
 function updateCta(anySet: boolean): void {
@@ -130,16 +91,6 @@ function updateCta(anySet: boolean): void {
   }
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function formatRate(tool: string, rate: number): string {
-  if (tool === 'midjourney') return `${rate.toFixed(2)} hr/$`;
-  if (tool === 'elevenlabs') return `${Math.round(rate).toLocaleString()} ch/$`;
-  return `${Math.round(rate)} cr/$`;
-}
-
-// ── Wire buttons ──────────────────────────────────────────────────────────────
-
 document.getElementById('dashboard-btn')!.addEventListener('click', () => {
   chrome.tabs.create({ url: chrome.runtime.getURL('dashboard/dashboard.html') });
   window.close();
@@ -148,7 +99,5 @@ document.getElementById('dashboard-btn')!.addEventListener('click', () => {
 document.getElementById('skip-btn')!.addEventListener('click', () => {
   window.close();
 });
-
-// ── Boot ──────────────────────────────────────────────────────────────────────
 
 render().catch(console.error);

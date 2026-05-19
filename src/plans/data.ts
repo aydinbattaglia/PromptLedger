@@ -42,6 +42,29 @@ export function computeRate(credits: number, costUsd: number): number | null {
   return parseFloat((credits / costUsd).toFixed(4));
 }
 
+/** Human-readable label for a plan dropdown option. */
+export function planOptionLabel(tool: string, planKey: string): string {
+  const plan = KNOWN_PLANS[tool]?.[planKey];
+  if (!plan) return planKey;
+  const { plan_name, credits_per_dollar, monthly_credits, monthly_cost_usd } = plan;
+  if (monthly_cost_usd === 0) {
+    const quota = monthly_credits ? formatQuota(tool, monthly_credits) : 'unlimited';
+    return `${plan_name} — ${quota}/mo (free)`;
+  }
+  if (credits_per_dollar === 0) {
+    const costStr = monthly_cost_usd !== null ? `$${monthly_cost_usd}/mo` : 'custom';
+    return `${plan_name} — ${costStr} (usage only)`;
+  }
+  const quota = monthly_credits ? formatQuota(tool, monthly_credits) : '?';
+  return `${plan_name} — ${quota}/mo · $${monthly_cost_usd}/mo`;
+}
+
+function formatQuota(tool: string, n: number): string {
+  if (tool === 'midjourney') return `${n} hr`;
+  if (tool === 'elevenlabs') return `${Math.round(n / 1_000)}k ch`;
+  return n.toLocaleString() + ' cr';
+}
+
 /** Billing page URLs to open when plan is not yet configured. */
 export const BILLING_URLS: Record<string, string> = {
   runway:     'https://app.runwayml.com/settings',

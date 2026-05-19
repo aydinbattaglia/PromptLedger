@@ -13,6 +13,7 @@ import {
 } from 'chart.js';
 
 import { getRecords, saveRecord, deleteRecord, clearAll } from '../storage/idb.js';
+import { KNOWN_PLANS, planOptionLabel } from '../plans/data.js';
 import type { GenerationRecord, RecordFilters, ToolId } from '../types/index.js';
 import {
   CURRENCIES, CURRENCY_META, type CurrencyCode,
@@ -530,6 +531,186 @@ document.getElementById('help-btn')!.addEventListener('click', () => {
 });
 document.getElementById('export-btn')!.addEventListener('click', exportCSV);
 document.getElementById('clear-btn')!.addEventListener('click', () => void handleClearAll());
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+
+function showTab(name: string): void {
+  document.querySelectorAll<HTMLElement>('.tab').forEach((t) =>
+    t.classList.toggle('active', t.dataset['tab'] === name),
+  );
+  document.querySelectorAll<HTMLElement>('.tab-panel').forEach((p) =>
+    p.classList.toggle('active', p.id === `tab-${name}`),
+  );
+  if (name === 'settings') void renderSettings();
+}
+
+document.querySelectorAll<HTMLElement>('.tab').forEach((btn) => {
+  btn.addEventListener('click', () => showTab(btn.dataset['tab'] ?? 'generations'));
+});
+
+// ── Settings helpers ──────────────────────────────────────────────────────────
+
+const SETTINGS_TOOLS = ['runway', 'midjourney', 'elevenlabs'] as const;
+type STool = typeof SETTINGS_TOOLS[number];
+
+function sGet(keys: string[]): Promise<Record<string, unknown>> {
+  return new Promise((resolve) => chrome.storage.local.get(keys, resolve));
+}
+function sSet(items: Record<string, unknown>): Promise<void> {
+  return new Promise((resolve) => chrome.storage.local.set(items, resolve));
+}
+
+// ── Settings render ────────────────────────────────────────────────────────────
+
+async function renderSettings(): Promise<void> {
+  await Promise.all([renderSettingsPlans(), renderSettingsBudgets()]);
+}
+
+async function renderSettingsPlans(): Promise<void> {
+  const keys = SETTINGS_TOOLS.map((t) => `plan_key_${t}`);
+  const stored = await sGet(keys);
+  const container = document.getElementById('settings-plans')!;
+  container.innerHTML = '';
+
+  for (const tool of SETTINGS_TOOLS) {
+    const currentKey = stored[`plan_key_${tool}`] as string | undefined;
+
+    const row = document.createElement('div');
+    row.className = 'splan-row';
+
+    const label = document.createElement('span');
+    label.className = 'splan-tool';
+    label.textContent = tool;
+
+    const select = document.createElement('select');
+    select.className = 'splan-select';
+
+    const defaultOpt = document.createElement('option');
+    defaultOpt.value = '';
+    defaultOpt.textContent = '— not configured —';
+    select.appendChild(defaultOpt);
+
+    for (const key of Object.keys(KNOWN_PLANS[tool] ?? {})) {
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = planOptionLabel(tool, key);
+      select.appendChild(opt);
+    }
+
+    if (currentKey) select.value = currentKey;
+
+    select.addEventListener('change', async () => {
+      const key = select.value;
+      if (!key) {
+        await sSet({
+          [`plan_key_${tool}`]: null,
+          [`plan_rate_${tool}`]: null,
+          [`plan_name_${tool}`]: null,
+          [`plan_is_free_${tool}`]: false,
+          [`plan_override_${tool}`]: false,
+        });
+        return;
+      }
+      const plan = KNOWN_PLANS[tool]?.[key];
+      if (!plan) return;
+      await sSet({
+        [`plan_key_${tool}`]: key,
+        [`plan_rate_${tool}`]: plan.credits_per_dollar > 0 ? plan.credits_per_dollar : null,
+        [`plan_name_${tool}`]: plan.plan_name,
+        [`plan_is_free_${tool}`]: plan.monthly_cost_usd === 0,
+        [`plan_override_${tool}`]: false,
+      });
+    });
+
+    row.appendChild(label);
+    row.appendChild(select);
+    container.appendChild(row);
+  }
+}
+
+async function renderSettingsBudgets(): Promise<void> {
+  const keys = SETTINGS_TOOLS.flatMap((t) => [`budget_daily_${t}`, `budget_monthly_${t}`]);
+  const stored = await sGet(keys);
+  const container = document.getElementById('settings-budgets')!;
+  container.innerHTML = '';
+
+  const meta = CURRENCY_META[displayCurrency];
+  const rate = exchangeRates[displayCurrency] ?? 1;
+  const fmtLimit = (usd: number | undefined) =>
+    usd !== undefined && usd > 0
+      ? `${meta.symbol}${(usd * rate).toFixed(meta.decimals)}`
+      : '—';
+  const toDisplay = (usd: number | undefined) =>
+    usd !== undefined && usd > 0 ? (usd * rate).toFixed(meta.decimals) : '';
+
+  for (const tool of SETTINGS_TOOLS) {
+    const daily   = stored[`budget_daily_${tool}`] as number | undefined;
+    const monthly = stored[`budget_monthly_${tool}`] as number | undefined;
+
+    const row = document.createElement('div');
+    row.className = 'sbudget-row';
+    row.innerHTML = `
+      <span class="sbudget-tool">${tool}</span>
+      <div class="sbudget-limits">
+        <div class="sbudget-limit">
+          <span class="sbudget-label">Daily</span>
+          <span class="sbudget-val">${fmtLimit(daily)}</span>
+        </div>
+        <div class="sbudget-limit">
+          <span class="sbudget-label">Monthly</span>
+          <span class="sbudget-val">${fmtLimit(monthly)}</span>
+        </div>
+      </div>
+      <button class="btn sbudget-edit">Edit</button>`;
+
+    const form = document.createElement('div');
+    form.className = 'sbudget-form';
+    form.innerHTML = `
+      <span class="sbudget-tool">${tool}</span>
+      <div class="sbudget-pair">
+        <span class="sbudget-period-label">Daily</span>
+        <span class="sbudget-prefix">${meta.symbol}</span>
+        <input class="sbudget-input" data-period="daily" type="number" min="0" step="any"
+               placeholder="no limit" value="${toDisplay(daily)}" />
+      </div>
+      <div class="sbudget-pair">
+        <span class="sbudget-period-label">Monthly</span>
+        <span class="sbudget-prefix">${meta.symbol}</span>
+        <input class="sbudget-input" data-period="monthly" type="number" min="0" step="any"
+               placeholder="no limit" value="${toDisplay(monthly)}" />
+      </div>
+      <button class="btn btn-primary sbudget-save">Save</button>
+      <button class="btn sbudget-cancel">Cancel</button>`;
+
+    row.querySelector('.sbudget-edit')!.addEventListener('click', () => {
+      row.style.display = 'none';
+      form.classList.add('visible');
+      (form.querySelector('.sbudget-input') as HTMLInputElement).focus();
+    });
+
+    form.querySelector('.sbudget-save')!.addEventListener('click', async () => {
+      const inputs = form.querySelectorAll<HTMLInputElement>('.sbudget-input');
+      const vals: Record<string, unknown> = {};
+      for (const input of inputs) {
+        const period = input.dataset['period']!;
+        const raw = parseFloat(input.value);
+        vals[`budget_${period}_${tool}`] = isNaN(raw) || raw <= 0 ? null : raw / rate;
+      }
+      await sSet(vals);
+      row.style.display = '';
+      form.classList.remove('visible');
+      await renderSettingsBudgets();
+    });
+
+    form.querySelector('.sbudget-cancel')!.addEventListener('click', () => {
+      form.classList.remove('visible');
+      row.style.display = '';
+    });
+
+    container.appendChild(row);
+    container.appendChild(form);
+  }
+}
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 
