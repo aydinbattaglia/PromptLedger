@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PromptLedger — Privacy Policy</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 680px; margin: 48px auto; padding: 0 24px; color: #1a1a1a; line-height: 1.6; }
+    h1 { font-size: 1.5rem; margin-bottom: 4px; }
+    .updated { color: #666; font-size: 0.9rem; margin-bottom: 32px; }
+    h2 { font-size: 1rem; margin-top: 28px; }
+    ul { padding-left: 20px; }
+    li { margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+  <h1>PromptLedger Privacy Policy</h1>
+  <p class="updated">Last updated: May 2026</p>
+
+  <p>PromptLedger is a browser extension that tracks credit usage on AI creative tools. All data is stored locally on your device. Nothing is sent to any server operated by PromptLedger.</p>
+
+  <h2>Data stored locally</h2>
+  <p>PromptLedger stores the following in your browser's IndexedDB:</p>
+  <ul>
+    <li>Prompt text submitted to supported tools (Runway, Midjourney, ElevenLabs)</li>
+    <li>Credits used and estimated cost per generation</li>
+    <li>Timestamp, model name, and optional project tag per generation</li>
+    <li>User-configured settings (budget limits, display currency, plan rates)</li>
+  </ul>
+  <p>This data never leaves your device and is never transmitted to PromptLedger or any third party.</p>
+
+  <h2>Network requests</h2>
+  <p>The only outbound request made by PromptLedger is a daily fetch to <code>api.frankfurter.app</code> to retrieve currency exchange rates. No user data is included in this request.</p>
+
+  <h2>Data you control</h2>
+  <p>You can clear all stored generation records at any time from the dashboard. Uninstalling the extension removes all stored data.</p>
+
+  <h2>Permissions</h2>
+  <ul>
+    <li><strong>storage</strong> — saves generation records and settings locally</li>
+    <li><strong>tabs</strong> — opens the onboarding page on first install</li>
+    <li><strong>notifications</strong> — sends budget alerts when spend limits are reached</li>
+    <li><strong>alarms</strong> — schedules the daily exchange rate refresh</li>
+    <li><strong>Host permissions</strong> (runwayml.com, midjourney.com, elevenlabs.io) — injects content scripts that observe credit balance changes on these sites only</li>
+  </ul>
+
+  <h2>Contact</h2>
+  <p>Questions? Email <a href="mailto:aydin.battaglia@gmail.com">aydin.battaglia@gmail.com</a></p>
+</body>
+</html>
