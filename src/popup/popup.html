@@ -40,7 +40,7 @@
 
     body {
       width: 320px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       font-size: 13px;
       background: var(--bg);
       color: var(--text);
@@ -84,22 +84,24 @@
       display: flex;
       flex-direction: column;
       gap: 4px;
-      padding: 14px 12px;
+      padding: 16px 14px;
       background: var(--bg);
     }
 
     .stat .label {
-      font-size: 10px;
+      font-size: 9px;
+      font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.08em;
       color: var(--text-3);
     }
 
     .stat .value {
-      font-size: 15px;
-      font-weight: 600;
+      font-size: 20px;
+      font-weight: 700;
       color: var(--white);
       font-variant-numeric: tabular-nums;
+      letter-spacing: -0.02em;
     }
 
     #by-tool {
@@ -109,15 +111,35 @@
 
     .tool-row {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 6px 0;
+      flex-direction: column;
+      padding: 7px 0;
       border-bottom: 1px solid var(--border-sub);
       color: var(--text-2);
     }
     .tool-row:last-child { border-bottom: none; }
-    .tool-name { text-transform: capitalize; }
-    .tool-cost { font-variant-numeric: tabular-nums; color: var(--text); }
+
+    .tool-row-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+
+    .tool-name { font-size: 12px; }
+    .tool-cost { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--text); }
+
+    .tool-bar-track {
+      height: 2px;
+      background: var(--border);
+      border-radius: 2px;
+    }
+    .tool-bar-fill {
+      height: 2px;
+      background: var(--accent);
+      border-radius: 2px;
+      opacity: 0.6;
+      transition: width 0.35s ease;
+    }
 
     .empty-state {
       padding: 20px 16px;
@@ -212,9 +234,10 @@
     }
 
     .section-label {
-      font-size: 10px;
+      font-size: 9px;
+      font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.08em;
       color: var(--text-3);
       margin-bottom: 8px;
     }
@@ -375,16 +398,27 @@
     }
 
     footer a {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
       font-size: 12px;
-      color: var(--accent);
+      color: var(--text-4);
       text-decoration: none;
+      padding: 6px 14px;
+      border: 1px solid var(--btn-border);
+      border-radius: 5px;
+      transition: background 0.1s, border-color 0.1s, color 0.1s;
     }
-    footer a:hover { text-decoration: underline; }
+    footer a:hover { background: var(--raised); border-color: var(--accent); color: var(--accent); }
   </style>
 </head>
 <body>
   <header>
-    <h1>PromptLedger</h1>
+    <h1>
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none" style="vertical-align:-2px;margin-right:6px;color:var(--accent)">
+        <rect x="2" y="1" width="10" height="13" rx="1.75" stroke="currentColor" stroke-width="1.35"/>
+        <path d="M4.5 5h6M4.5 7.75h6M4.5 10.5h3.5" stroke="currentColor" stroke-width="1.15" stroke-linecap="round"/>
+      </svg>PromptLedger</h1>
     <button id="pause-btn">Pause</button>
   </header>
 
@@ -431,7 +465,12 @@
   </section>
 
   <footer>
-    <a id="dashboard-link" href="#">Open full dashboard</a>
+    <a id="dashboard-link" href="#">
+      Open full dashboard
+      <svg width="9" height="9" viewBox="0 0 9 9" fill="none">
+        <path d="M1.5 4.5h6M5 2l2.5 2.5L5 7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </a>
   </footer>
 
   <script src="popup.js"></script>

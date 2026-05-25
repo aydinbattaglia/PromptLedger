@@ -5,8 +5,6 @@
   "description": "Per-prompt cost and usage tracking for AI creative tools",
   "permissions": [
     "storage",
-    "tabs",
-    "activeTab",
     "notifications",
     "alarms"
   ],

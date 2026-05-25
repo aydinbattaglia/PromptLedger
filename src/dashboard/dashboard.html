@@ -51,7 +51,7 @@
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       font-size: 13px;
       background: var(--bg);
       color: var(--text);
@@ -175,17 +175,19 @@
     }
 
     .card-label {
-      font-size: 10px;
+      font-size: 9px;
+      font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.08em;
       color: var(--text-3);
     }
 
     .card-value {
-      font-size: 22px;
-      font-weight: 600;
+      font-size: 26px;
+      font-weight: 700;
       color: var(--white);
       font-variant-numeric: tabular-nums;
+      letter-spacing: -0.02em;
     }
 
     .card-value.flagged { color: var(--flag); }
@@ -413,9 +415,9 @@
     .settings-wrap { max-width: 700px; }
     .settings-section { margin-bottom: 36px; }
     .settings-section-title {
-      font-size: 11px;
+      font-size: 9px;
       text-transform: uppercase;
-      letter-spacing: 0.07em;
+      letter-spacing: 0.09em;
       color: var(--text-3);
       font-weight: 600;
       margin-bottom: 6px;
@@ -529,7 +531,11 @@
 </head>
 <body>
   <header>
-    <h1>PromptLedger</h1>
+    <h1>
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none" style="vertical-align:-2px;margin-right:7px;color:var(--accent)">
+        <rect x="2" y="1" width="10" height="13" rx="1.75" stroke="currentColor" stroke-width="1.35"/>
+        <path d="M4.5 5h6M4.5 7.75h6M4.5 10.5h3.5" stroke="currentColor" stroke-width="1.15" stroke-linecap="round"/>
+      </svg>PromptLedger</h1>
     <div class="header-actions">
       <button class="btn" id="theme-btn">Dark mode</button>
       <select class="btn" id="currency-select">

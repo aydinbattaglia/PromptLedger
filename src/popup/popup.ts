@@ -5,6 +5,12 @@ import { type CurrencyCode, CURRENCY_META, convertUsd, formatCostSummary } from 
 const TOOLS = ['runway', 'elevenlabs', 'midjourney'] as const;
 type Tool = typeof TOOLS[number];
 
+const TOOL_LABELS: Record<string, string> = {
+  runway: 'Runway',
+  elevenlabs: 'ElevenLabs',
+  midjourney: 'Midjourney',
+};
+
 let displayCurrency: CurrencyCode = 'USD';
 let exchangeRates: Record<string, number> = { USD: 1 };
 
@@ -43,10 +49,18 @@ async function renderStats(): Promise<void> {
     return;
   }
 
+  const maxCost = Math.max(...tools.map(([, d]) => d.cost_usd || 0)) || 1;
+
   for (const [tool, data] of tools) {
+    const pct = Math.round(((data.cost_usd || 0) / maxCost) * 100);
     const row = document.createElement('div');
     row.className = 'tool-row';
-    row.innerHTML = `<span class="tool-name">${tool}</span><span class="tool-cost">${formatCostSummary(data.cost_usd, displayCurrency, exchangeRates)}</span>`;
+    row.innerHTML = `
+      <div class="tool-row-header">
+        <span class="tool-name">${TOOL_LABELS[tool] ?? tool}</span>
+        <span class="tool-cost">${formatCostSummary(data.cost_usd, displayCurrency, exchangeRates)}</span>
+      </div>
+      <div class="tool-bar-track"><div class="tool-bar-fill" style="width:${pct}%"></div></div>`;
     byToolEl.appendChild(row);
   }
 }
