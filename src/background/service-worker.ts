@@ -1,5 +1,6 @@
 import { saveRecord, getToolSpend } from '../storage/idb.js';
 import { CURRENCY_META, type CurrencyCode } from '../util/currency.js';
+import { emptyHealth, recordStart, recordComplete, type ToolHealth } from '../util/health.js';
 import type { ExtensionMessage, GenerationRecord, ToolId } from '../types/index.js';
 
 interface InFlightEntry {
@@ -74,6 +75,7 @@ async function handleMessage(message: ExtensionMessage): Promise<void> {
       },
       balance_before,
     });
+    await updateHealth(tool, (h) => recordStart(h));
     return;
   }
 
@@ -120,8 +122,22 @@ async function handleMessage(message: ExtensionMessage): Promise<void> {
       await updateRunningAverage(tool, credits_used);
     }
 
+    await updateHealth(tool, (h) => recordComplete(h, record.credits_used !== null));
+
     void checkBudgets(tool);
   }
+}
+
+// ── Capture health ────────────────────────────────────────────────────────────
+
+async function updateHealth(tool: string, update: (h: ToolHealth) => ToolHealth): Promise<void> {
+  return new Promise((resolve) => {
+    chrome.storage.local.get('capture_health', (result) => {
+      const all = (result['capture_health'] as Record<string, ToolHealth> | undefined) ?? {};
+      all[tool] = update(all[tool] ?? emptyHealth());
+      chrome.storage.local.set({ capture_health: all }, () => resolve());
+    });
+  });
 }
 
 // ── Budget alerts ─────────────────────────────────────────────────────────────

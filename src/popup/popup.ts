@@ -1,6 +1,7 @@
 import { getStats } from '../storage/idb.js';
 import { KNOWN_PLANS, planOptionLabel } from '../plans/data.js';
 import { type CurrencyCode, CURRENCY_META, convertUsd, formatCostSummary } from '../util/currency.js';
+import { assessHealth, type ToolHealth } from '../util/health.js';
 
 const TOOLS = ['runway', 'elevenlabs', 'midjourney'] as const;
 type Tool = typeof TOOLS[number];
@@ -22,7 +23,33 @@ async function init(): Promise<void> {
     delete document.documentElement.dataset['theme'];
   }
   wireProjectEvents();
-  await Promise.all([loadCurrencySettings(), renderStats(), renderPlans(), renderProjects(), renderBudgets(), wirePause(), wireDashboard()]);
+  await Promise.all([loadCurrencySettings(), renderStats(), renderPlans(), renderProjects(), renderBudgets(), wirePause(), wireDashboard(), renderHealth()]);
+}
+
+// ── Capture health ───────────────────────────────────────────────────────────
+
+async function renderHealth(): Promise<void> {
+  const stored = await storageGet(['capture_health']);
+  const all = (stored['capture_health'] as Record<string, ToolHealth> | undefined) ?? {};
+
+  const problems: string[] = [];
+  for (const tool of TOOLS) {
+    const h = all[tool];
+    if (!h) continue;
+    const status = assessHealth(h);
+    if (status === 'capture-stalled') {
+      problems.push(`<strong>${TOOL_LABELS[tool]}:</strong> a generation was detected but never recorded — the site's UI may have changed.`);
+    } else if (status === 'cost-blind') {
+      problems.push(`<strong>${TOOL_LABELS[tool]}:</strong> recent generations recorded without a cost — the balance display may have changed.`);
+    }
+  }
+
+  if (problems.length === 0) return;
+  const banner = document.getElementById('health-banner')!;
+  banner.innerHTML =
+    problems.join('<br>') +
+    '<br>Check for an extension update, or report this at the project page.';
+  banner.classList.add('visible');
 }
 
 async function loadCurrencySettings(): Promise<void> {
