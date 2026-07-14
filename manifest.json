@@ -40,6 +40,16 @@
       ],
       "js": ["content/index.js"],
       "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "*://*.runwayml.com/*settings/billing*",
+        "*://elevenlabs.io/app/subscription*",
+        "*://*.elevenlabs.io/app/subscription*",
+        "*://*.midjourney.com/account*"
+      ],
+      "js": ["plans/detector.js"],
+      "run_at": "document_idle"
     }
   ],
   "icons": {

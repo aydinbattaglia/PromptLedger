@@ -1,6 +1,7 @@
 // Known plan configurations — used as fallback when DOM parsing fails.
 // Rates change; DOM-computed rates are always preferred over these constants.
-// Source: PRD Appendix A (2026-05).
+// Source: verified live 2026-07-14 (runwayml.com/pricing, elevenlabs.io/app/subscription).
+// Midjourney rates unverified since 2026-05 (requires a subscribed account).
 
 import type { ToolId } from '../types/index.js';
 
@@ -15,17 +16,19 @@ export interface PlanInfo {
 
 export const KNOWN_PLANS: Record<string, Record<string, Omit<PlanInfo, 'tool'>>> = {
   runway: {
-    basic:     { plan_name: 'Basic',     credits_per_dollar: 8.33,  monthly_credits: 125,  monthly_cost_usd: 15 },
-    standard:  { plan_name: 'Standard',  credits_per_dollar: 41.67, monthly_credits: 625,  monthly_cost_usd: 15 },
-    pro:       { plan_name: 'Pro',       credits_per_dollar: 64.29, monthly_credits: 2250, monthly_cost_usd: 35 },
-    unlimited: { plan_name: 'Unlimited', credits_per_dollar: 0,     monthly_credits: null, monthly_cost_usd: 95 },
+    free:     { plan_name: 'Free',     credits_per_dollar: 0,     monthly_credits: 125,  monthly_cost_usd: 0  }, // 125 one-time credits
+    standard: { plan_name: 'Standard', credits_per_dollar: 41.67, monthly_credits: 625,  monthly_cost_usd: 15 },
+    pro:      { plan_name: 'Pro',      credits_per_dollar: 64.29, monthly_credits: 2250, monthly_cost_usd: 35 },
+    max:      { plan_name: 'Max',      credits_per_dollar: 100,   monthly_credits: 9500, monthly_cost_usd: 95 },
   },
   elevenlabs: {
-    free:       { plan_name: 'Free',       credits_per_dollar: 0,     monthly_credits: 10_000,  monthly_cost_usd: 0  },
-    starter:    { plan_name: 'Starter',    credits_per_dollar: 6_000, monthly_credits: 30_000,  monthly_cost_usd: 5  },
-    creator:    { plan_name: 'Creator',    credits_per_dollar: 4_545, monthly_credits: 100_000, monthly_cost_usd: 22 },
-    pro:        { plan_name: 'Pro',        credits_per_dollar: 5_051, monthly_credits: 500_000, monthly_cost_usd: 99 },
-    enterprise: { plan_name: 'Enterprise', credits_per_dollar: 0,     monthly_credits: null,    monthly_cost_usd: null },
+    free:       { plan_name: 'Free',       credits_per_dollar: 0,       monthly_credits: 10_000,    monthly_cost_usd: 0   },
+    starter:    { plan_name: 'Starter',    credits_per_dollar: 5_000,   monthly_credits: 30_000,    monthly_cost_usd: 6   },
+    creator:    { plan_name: 'Creator',    credits_per_dollar: 5_500,   monthly_credits: 121_000,   monthly_cost_usd: 22  },
+    pro:        { plan_name: 'Pro',        credits_per_dollar: 6_060.6, monthly_credits: 600_000,   monthly_cost_usd: 99  },
+    scale:      { plan_name: 'Scale',      credits_per_dollar: 6_020.1, monthly_credits: 1_800_000, monthly_cost_usd: 299 },
+    business:   { plan_name: 'Business',   credits_per_dollar: 6_060.6, monthly_credits: 6_000_000, monthly_cost_usd: 990 },
+    enterprise: { plan_name: 'Enterprise', credits_per_dollar: 0,       monthly_credits: null,      monthly_cost_usd: null },
   },
   // Midjourney unit: Fast GPU hours. credits_per_dollar = GPU hours per dollar.
   midjourney: {
