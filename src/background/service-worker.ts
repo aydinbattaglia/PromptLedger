@@ -214,17 +214,22 @@ async function isValidDelta(tool: string, delta: number): Promise<boolean> {
   const cap = TOOL_CREDIT_CAPS[tool] ?? 10_000;
   if (delta > cap) return false;
 
-  // Flag if delta is more than 5× the tool's running average (PRD §F-02)
-  const avg = await getRunningAverage(tool);
-  if (avg > 0 && delta > avg * 5) return false;
+  // Flag if delta is more than 5× the tool's running average (PRD §F-02).
+  // Only enforce once the EMA has a few samples — with 1–2 samples, ordinary
+  // variation (a short TTS clip followed by a paragraph) would trip the 5× rule.
+  const { avg, count } = await getRunningAverage(tool);
+  if (count >= 3 && avg > 0 && delta > avg * 5) return false;
 
   return true;
 }
 
-async function getRunningAverage(tool: string): Promise<number> {
+async function getRunningAverage(tool: string): Promise<{ avg: number; count: number }> {
   return new Promise((resolve) => {
-    chrome.storage.local.get(`avg_${tool}`, (result) => {
-      resolve((result[`avg_${tool}`] as number | undefined) ?? 0);
+    chrome.storage.local.get([`avg_${tool}`, `avgn_${tool}`], (result) => {
+      resolve({
+        avg: (result[`avg_${tool}`] as number | undefined) ?? 0,
+        count: (result[`avgn_${tool}`] as number | undefined) ?? 0,
+      });
     });
   });
 }

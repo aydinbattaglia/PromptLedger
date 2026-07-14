@@ -92,6 +92,17 @@ export async function clearExtensionRecords(browser: Browser): Promise<void> {
         req.onerror = () => resolve();
       });
     });
+    // Also reset per-tool EMA validation state so credit deltas recorded by one
+    // test don't cause 5×-average flagging in the next
+    await page.evaluate(async () => {
+      return new Promise<void>((resolve) => {
+        chrome.storage.local.get(null, (all) => {
+          const emaKeys = Object.keys(all).filter((k) => k.startsWith('avg_') || k.startsWith('avgn_'));
+          if (emaKeys.length === 0) { resolve(); return; }
+          chrome.storage.local.remove(emaKeys, () => resolve());
+        });
+      });
+    });
   } catch {
     // ignore — empty store is fine
   } finally {

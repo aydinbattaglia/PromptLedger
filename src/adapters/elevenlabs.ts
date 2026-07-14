@@ -215,6 +215,17 @@ function createElevenLabsAdapter(): Adapter {
               : Math.max(0, balanceBefore - (after - balanceBefore));
           };
 
+          // The 2026-07 UI does not refresh the quota display after a generation
+          // (it only updates on page reload), so the DOM delta is usually
+          // unavailable. Standard TTS charges exactly 1 credit per character of
+          // submitted text (verified live 2026-07-14: 68 chars → 68 credits), so
+          // derive the post-generation balance from the prompt length instead.
+          const promptChars = prompt?.length ?? 0;
+          const derivedBalance = (): number | null =>
+            hasQuota && promptChars > 0
+              ? Math.max(0, balanceBefore - promptChars)
+              : null;
+
           // ── Path 1: quota counter changes (paid plans) ──
           let unwatchBalance = () => {};
           if (hasQuota) {
@@ -235,7 +246,7 @@ function createElevenLabsAdapter(): Adapter {
             if (completed) { audioObs.disconnect(); return; }
             const audio = document.querySelector<HTMLAudioElement>('audio[src]:not([src=""])');
             if (!audio?.src || existingAudioSrcs.has(audio.src)) return;
-            completeSession(readBalance());
+            completeSession(readBalance() ?? derivedBalance());
           });
           audioObs.observe(document.body, {
             subtree: true, childList: true,
@@ -245,7 +256,7 @@ function createElevenLabsAdapter(): Adapter {
           // ── Path 3: API response (most reliable — fires when synthesis completes) ──
           const unwatchNet = makeIdempotent(
             interceptNetwork(EL_API, () => {
-              completeSession(readBalance());
+              completeSession(readBalance() ?? derivedBalance());
             }),
           );
 
