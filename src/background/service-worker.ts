@@ -8,9 +8,25 @@ interface InFlightEntry {
   balance_before: number | null;
 }
 
-// Lost if SW is killed between GENERATION_START and GENERATION_COMPLETE.
-// Future: persist via chrome.storage.session for durability.
-const inFlight = new Map<string, InFlightEntry>();
+// In-flight generations live in chrome.storage.session so they survive MV3
+// service-worker termination (Chrome kills idle SWs in ~30s; Runway video
+// generations run 2–5 minutes). Session storage clears on browser restart,
+// which matches the lifetime of an in-flight generation.
+function setInFlight(sessionKey: string, entry: InFlightEntry): Promise<void> {
+  return new Promise((resolve) =>
+    chrome.storage.session.set({ [`inflight_${sessionKey}`]: entry }, resolve),
+  );
+}
+
+function takeInFlight(sessionKey: string): Promise<InFlightEntry | undefined> {
+  return new Promise((resolve) => {
+    const key = `inflight_${sessionKey}`;
+    chrome.storage.session.get(key, (result) => {
+      const entry = result[key] as InFlightEntry | undefined;
+      chrome.storage.session.remove(key, () => resolve(entry));
+    });
+  });
+}
 
 // Hard ceiling on credits per single generation, per tool (PRD §F-02)
 const TOOL_CREDIT_CAPS: Record<string, number> = {
@@ -65,7 +81,7 @@ chrome.runtime.onMessage.addListener(
 async function handleMessage(message: ExtensionMessage): Promise<void> {
   if (message.type === 'GENERATION_START') {
     const { session_key, tool, model, prompt, balance_before } = message.payload;
-    inFlight.set(session_key, {
+    await setInFlight(session_key, {
       partial: {
         tool,
         model: model ?? 'unknown',
@@ -83,8 +99,7 @@ async function handleMessage(message: ExtensionMessage): Promise<void> {
     const { session_key, tool, balance_after, generation_id, duration_sec, resolution } =
       message.payload;
 
-    const entry = inFlight.get(session_key);
-    inFlight.delete(session_key);
+    const entry = await takeInFlight(session_key);
 
     const credits_used =
       entry !== undefined && entry.balance_before !== null && balance_after !== null
