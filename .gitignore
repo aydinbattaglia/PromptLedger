@@ -1,3 +1,5 @@
 node_modules/
 dist/
 .claude-flow/
+*.zip
+.DS_Store

@@ -5,7 +5,7 @@ export interface AdapterContext {
    * Fire GENERATION_START. Returns a session key to pass to complete().
    * Returns an empty string if logging is paused — complete() treats '' as a no-op.
    */
-  start(opts: { model?: string; prompt: string | null; balance_before: number }): string;
+  start(opts: { model?: string; prompt: string | null; balance_before: number | null }): string;
 
   /** Fire GENERATION_COMPLETE. No-op if sessionKey is empty (paused).
    *  Pass balance_after: null when the generation timed out and cost is unknown. */

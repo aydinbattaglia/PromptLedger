@@ -76,10 +76,10 @@ describe('Runway adapter — network path', () => {
     const page = await openRunwayPage();
 
     await page.evaluate(() => {
-      (window as Window & { _pl_msgs: unknown[] })._pl_msgs = [];
+      (window as unknown as Window & { _pl_msgs: unknown[] })._pl_msgs = [];
       window.addEventListener('message', (e) => {
         if ((e.data as { type?: string })?.type === '__pl_network__') {
-          (window as Window & { _pl_msgs: unknown[] })._pl_msgs.push(e.data);
+          (window as unknown as Window & { _pl_msgs: unknown[] })._pl_msgs.push(e.data);
         }
       });
     });
@@ -88,7 +88,7 @@ describe('Runway adapter — network path', () => {
     await new Promise((r) => setTimeout(r, 500));
 
     const msgs = await page.evaluate(
-      () => (window as Window & { _pl_msgs: unknown[] })._pl_msgs,
+      () => (window as unknown as Window & { _pl_msgs: unknown[] })._pl_msgs,
     );
     expect(msgs.length).toBeGreaterThan(0);
     await page.close();

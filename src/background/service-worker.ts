@@ -5,7 +5,7 @@ import type { ExtensionMessage, GenerationRecord, ToolId } from '../types/index.
 
 interface InFlightEntry {
   partial: Partial<Omit<GenerationRecord, 'id'>>;
-  balance_before: number;
+  balance_before: number | null;
 }
 
 // Lost if SW is killed between GENERATION_START and GENERATION_COMPLETE.
@@ -87,7 +87,7 @@ async function handleMessage(message: ExtensionMessage): Promise<void> {
     inFlight.delete(session_key);
 
     const credits_used =
-      entry !== undefined && balance_after !== null
+      entry !== undefined && entry.balance_before !== null && balance_after !== null
         ? Math.max(0, entry.balance_before - balance_after)
         : null;
 

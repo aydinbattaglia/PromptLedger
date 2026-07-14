@@ -28,7 +28,8 @@ export interface GenerationStartPayload {
   tool: ToolId;
   model?: string;
   prompt: string | null;
-  balance_before: number;
+  /** null when the tool shows no balance in its UI (e.g. ElevenLabs Studio). */
+  balance_before: number | null;
 }
 
 export interface GenerationCompletePayload {
