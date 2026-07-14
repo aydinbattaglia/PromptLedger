@@ -1,8 +1,11 @@
 // Runway adapter — charges credits (1 credit ≈ $0.01–$0.024 depending on plan).
 // Complexity: Medium — async video generation (30s–2min) + XHR balance updates.
 //
-// SELECTORS: verify against app.runwayml.com before shipping.
+// SELECTORS: verified against app.runwayml.com as of 2026-07-14.
 // When Runway updates their UI, update only the SEL constants below.
+// (Exception: the 2026-07 UI gives the Generate button no testid/aria and the SAME
+// classes as the "Upgrade"/"Try in Edit Studio" CTAs, so clicks are confirmed by
+// label via isGenerateButton().)
 
 import { registerAdapter } from './registry.js';
 import { watchText, delegateClick } from '../util/dom-observer.js';
@@ -13,15 +16,17 @@ const SEL = {
   // Credit balance button — text like "290 credits" or "2,150 credits"
   balance:
     '[data-testid="credit-info-button"], [data-testid="credits-display"], [class*="CreditsDisplay"], [data-testid="user-credits"]',
-  // Primary Generate button — no testid/aria in current UI; falls back to aria match for older UI
+  // CANDIDATE generate buttons — over-matches marketing CTAs by design; every hit
+  // must also pass isGenerateButton() before being treated as a generation
   generateBtn:
-    'button[class*="primaryBlue"], button[data-testid="generate-button"], button[aria-label*="Generate" i][type="button"]:not([disabled])',
+    'button[class*="primaryButton"], button[class*="primaryBlue"], button[data-testid="generate-button"], button[aria-label*="Generate" i][type="button"]:not([disabled])',
   // Prompt textarea or contenteditable div in the editor
   prompt:
     'textarea[data-testid="prompt-input"], textarea[placeholder*="Describe" i], textarea[placeholder*="prompt" i], [data-testid="prompt-input"][contenteditable], [contenteditable="true"][aria-label*="prompt" i], [contenteditable="true"][aria-label*="Describe" i]',
-  // Active model label (e.g. "Gen-4 Turbo")
+  // Active model label (e.g. "Gen-4 Turbo"). 2026-07 UI: video mode keeps
+  // select-base-model; image mode uses select-image-base-model — suffix match covers both
   model:
-    '[data-testid="select-base-model"], [data-testid="model-name"], [class*="ModelName"]',
+    '[data-testid$="base-model"], [data-testid="model-name"], [class*="ModelName"]',
   // Resolution / aspect ratio button
   resolution:
     'button[aria-label="Aspect ratio"], [data-testid="resolution-selector"] [aria-selected="true"]',
@@ -29,6 +34,17 @@ const SEL = {
 
 // URL patterns that Runway uses for their generation API
 const RUNWAY_API = /runwayml\.com/;
+
+// Confirms a SEL.generateBtn candidate is the real Generate button. The 2026-07 UI
+// gives it no testid/aria and the same primaryBlue/primaryButton classes as the
+// "Upgrade" and "Try in Edit Studio" CTAs — only its label distinguishes it.
+export function isGenerateButton(el: Element): boolean {
+  if (el.matches('[data-testid="generate-button"]')) return true;
+  if (/^generate$/i.test(el.textContent?.trim() ?? '')) return true;
+  const aria = el.getAttribute('aria-label') ?? '';
+  // Older UI aria fallback; excludes the "Generate prompt from image" icon button
+  return /^generate/i.test(aria) && !/prompt from image/i.test(aria);
+}
 
 export function parseCredits(text: string): number {
   const m = text.replace(/,/g, '').match(/\d+/);
@@ -159,7 +175,11 @@ function createRunwayAdapter(): Adapter {
         cleanups.push(() => { finish(); clearTimeout(timeout); });
       };
 
-      cleanups.push(delegateClick(SEL.generateBtn, startGeneration));
+      cleanups.push(
+        delegateClick(SEL.generateBtn, (el) => {
+          if (isGenerateButton(el)) startGeneration();
+        }),
+      );
 
       // Enter key in the prompt field also submits on Runway
       const keyHandler = (event: Event) => {

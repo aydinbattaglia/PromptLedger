@@ -2,8 +2,10 @@
 // Complexity: Low (DOM observer only; no network parsing needed).
 // Studio mode (/app/studio/*) uses audio element observation — no balance in DOM.
 //
-// SELECTORS: verified against elevenlabs.io as of 2026-05.
+// SELECTORS: verified against elevenlabs.io as of 2026-07-14.
 // Update only the SEL constants if the UI changes — no logic changes needed.
+// (Exception: balance has no stable attributes in the 2026-07 UI, so
+// findBalanceEl() adds a text-scan fallback.)
 
 import { registerAdapter } from './registry.js';
 import { watchText, delegateClick } from '../util/dom-observer.js';
@@ -20,9 +22,10 @@ const STUDIO = {
 } as const;
 
 const SEL = {
-  // Monthly character quota — "9,500 / 10,000" (remaining) or "500 / 10,000" (used)
+  // Account quota display. Older UI: "9,500 / 10,000" characters with testid/class
+  // hooks. 2026-07 UI: a plain span "10,000 credits remaining" with NO stable
+  // attributes — findBalanceEl() below falls back to a text scan for that case.
   // NOTE: [data-testid="character-count"] is the *input* text length, not account quota.
-  // These selectors target the account quota display instead.
   balance: [
     '[data-testid="characters-remaining"]',
     '[data-testid="quota-remaining"]',
@@ -34,24 +37,42 @@ const SEL = {
     '[aria-label*="characters remaining" i]',
     '[aria-label*="monthly quota" i]',
   ].join(', '),
-  // Primary generate / synthesise button
+  // Primary generate / synthesise button (2026-07: data-testid="tts-generate",
+  // aria-label "Generate speech ⌘+Enter" — hence the prefix match)
   generateBtn: [
     'button[data-testid="generate-speech"]',
-    'button[aria-label="Generate speech"]',
+    'button[aria-label^="Generate speech"]',
     'button[data-testid="tts-generate"]',
     'button[class*="GenerateSpeech" i]',
     'button[class*="generate-speech" i]',
   ].join(', '),
-  // TTS text input
+  // TTS text input (2026-07: div[contenteditable] with data-testid="tts-editor")
   textArea:
     'textarea[data-testid="editor-input"], textarea[aria-label*="text" i], div[contenteditable="true"][data-testid]',
-  // Selected voice model label
+  // Selected voice model label (2026-07: button[data-testid="tts-model-selector"],
+  // text content is the model name, e.g. "Eleven Multilingual v2")
   model:
-    '[data-testid="voice-model-name"], [class*="VoiceModelName"], [data-testid="model-selector"] [aria-selected="true"]',
+    '[data-testid="tts-model-selector"], [data-testid="voice-model-name"], [class*="VoiceModelName"], [data-testid="model-selector"] [aria-selected="true"]',
 } as const;
 
+// Balance text in the 2026-07 UI, e.g. "10,000 credits remaining".
+// ElevenLabs rebranded character quota as "credits" (1 credit = 1 character for TTS);
+// parseChars extracts the number either way, so the delta logic is unit-agnostic.
+const BALANCE_TEXT_RE = /[\d,]+\s+(?:credits?|characters?)\s+remaining/i;
+
+// Finds the quota element: attribute selectors first (older UI), then a leaf-node
+// text scan (2026-07 UI has no stable attributes on the balance span).
+export function findBalanceEl(): Element | null {
+  const bySelector = document.querySelector(SEL.balance);
+  if (bySelector) return bySelector;
+  for (const el of document.querySelectorAll('span, div, p')) {
+    if (el.childElementCount === 0 && BALANCE_TEXT_RE.test(el.textContent ?? '')) return el;
+  }
+  return null;
+}
+
 export function parseChars(text: string): number {
-  // Handles "1,234", "1,234 / 10,000", "1234 characters remaining"
+  // Handles "1,234", "1,234 / 10,000", "1234 characters remaining", "10,000 credits remaining"
   const m = text.replace(/,/g, '').match(/\d+/);
   return m ? parseInt(m[0]!, 10) : 0;
 }
@@ -149,7 +170,7 @@ function createElevenLabsAdapter(): Adapter {
         delegateClick(SEL.generateBtn, () => {
           if (context.isPaused()) return;
 
-          const balanceEl = document.querySelector(SEL.balance);
+          const balanceEl = findBalanceEl();
           const balanceBefore = balanceEl ? parseChars(balanceEl.textContent ?? '0') : 0;
           const hasQuota = balanceEl !== null && balanceBefore > 0;
 
@@ -186,7 +207,7 @@ function createElevenLabsAdapter(): Adapter {
           };
 
           const readBalance = (): number | null => {
-            const afterEl = document.querySelector(SEL.balance);
+            const afterEl = findBalanceEl();
             const after = afterEl ? parseChars(afterEl.textContent ?? '0') : null;
             if (after === null || !hasQuota || after === balanceBefore) return null;
             return after < balanceBefore
@@ -198,7 +219,7 @@ function createElevenLabsAdapter(): Adapter {
           let unwatchBalance = () => {};
           if (hasQuota) {
             unwatchBalance = makeIdempotent(
-              watchText(SEL.balance, (current) => {
+              watchText(findBalanceEl, (current) => {
                 const after = parseChars(current);
                 if (after === balanceBefore) return;
                 const normalised = after < balanceBefore

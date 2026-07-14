@@ -1,16 +1,28 @@
 /**
- * Waits for the first element matching `selector` to appear in the DOM,
+ * A CSS selector string, or a function returning the target element (for
+ * elements with no stable attributes to select on).
+ */
+export type ElementFinder = string | (() => Element | null);
+
+function findElement(finder: ElementFinder, root: ParentNode): Element | null {
+  return typeof finder === 'string'
+    ? (root as Element | Document).querySelector(finder)
+    : finder();
+}
+
+/**
+ * Waits for the first element matching `finder` to appear in the DOM,
  * then calls `callback`. If the element already exists, callback fires synchronously.
  *
  * The callback may return a cleanup function that is called when the outer
  * cleanup is invoked. Returns a cleanup function.
  */
 export function waitForElement(
-  selector: string,
+  finder: ElementFinder,
   callback: (el: Element) => (() => void) | void,
   root: ParentNode = document,
 ): () => void {
-  const existing = (root as Element | Document).querySelector(selector);
+  const existing = findElement(finder, root);
   if (existing) {
     const teardown = callback(existing);
     return teardown ?? noOp;
@@ -19,7 +31,7 @@ export function waitForElement(
   let innerTeardown: (() => void) | undefined;
 
   const observer = new MutationObserver(() => {
-    const el = (root as Element | Document).querySelector(selector);
+    const el = findElement(finder, root);
     if (!el) return;
     observer.disconnect();
     const teardown = callback(el);
@@ -35,16 +47,16 @@ export function waitForElement(
 }
 
 /**
- * Watches the text content of the element matching `selector` for changes.
+ * Watches the text content of the element matching `finder` for changes.
  * Calls `callback(currentText, previousText)` on each change.
  */
 export function watchText(
-  selector: string,
+  finder: ElementFinder,
   callback: (current: string, previous: string) => void,
   root: ParentNode = document,
 ): () => void {
   return waitForElement(
-    selector,
+    finder,
     (el) => {
       let prev = el.textContent ?? '';
 

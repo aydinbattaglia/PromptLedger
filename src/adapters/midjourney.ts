@@ -2,8 +2,12 @@
 // Complexity: Medium — GPU time units, SPA prompt submission.
 // Target: midjourney.com (web app, NOT Discord bot).
 //
-// SELECTORS: verify against midjourney.com before shipping.
-// The web UI changed significantly in 2024–2025; update SEL constants as needed.
+// SELECTORS: partially verified against midjourney.com 2026-07-14 (unsubscribed
+// account — creation UI disabled). CONFIRMED: the live app uses NO data-testid
+// attributes at all, so every testid-based selector below is dead weight kept only
+// as a fallback. The prompt textarea is id="desktop_input_bar" (verified live).
+// generateBtn / balance / model need re-verification on a SUBSCRIBED account —
+// the create button, fast-hours display, and model label do not render without one.
 
 import { registerAdapter } from './registry.js';
 import { watchText, delegateClick } from '../util/dom-observer.js';
@@ -16,9 +20,9 @@ const SEL = {
   // Prompt submission button — "Create", "Imagine", or submit icon
   generateBtn:
     'button[data-testid="create-button"], button[aria-label*="Create" i], button[aria-label*="Imagine" i], form[data-testid="prompt-form"] button[type="submit"]',
-  // Text prompt input
+  // Text prompt input — #desktop_input_bar verified live 2026-07-14
   prompt:
-    'textarea[data-testid="prompt-input"], input[data-testid="prompt-input"], [contenteditable="true"][data-testid*="prompt"]',
+    'textarea#desktop_input_bar, textarea[data-testid="prompt-input"], input[data-testid="prompt-input"], [contenteditable="true"][data-testid*="prompt"]',
   // Active model or version label (e.g. "v7", "Niji 6")
   model:
     '[data-testid="model-version"], [class*="ModelVersion"], [data-testid="active-model"]',
