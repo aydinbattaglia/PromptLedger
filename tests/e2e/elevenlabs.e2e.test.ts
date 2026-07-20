@@ -66,18 +66,19 @@ async function openStudioPage(): Promise<Page> {
   return page;
 }
 
-async function clickStudioSend(page: Page): Promise<void> {
+async function clickStudioGenerate(page: Page): Promise<void> {
   await page.evaluate(() => {
-    document.querySelector('button[aria-label="Send"]')?.dispatchEvent(
-      new MouseEvent('click', { bubbles: true, cancelable: true, composed: true }),
+    const btn = [...document.querySelectorAll('button')].find(
+      (b) => b.textContent?.trim() === 'Generate',
     );
+    btn?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true }));
   });
 }
 
 describe('ElevenLabs adapter — Studio mode', () => {
   it('records a generation when a new audio element appears', async () => {
     const page = await openStudioPage();
-    await clickStudioSend(page);
+    await clickStudioGenerate(page);
     await new Promise((r) => setTimeout(r, 400));
 
     await page.evaluate(() => {
@@ -97,7 +98,7 @@ describe('ElevenLabs adapter — Studio mode', () => {
 
   it('records a generation via content/generations network response', async () => {
     const page = await openStudioPage();
-    await clickStudioSend(page);
+    await clickStudioGenerate(page);
     await new Promise((r) => setTimeout(r, 400));
 
     await page.evaluate(async () => {
@@ -114,7 +115,7 @@ describe('ElevenLabs adapter — Studio mode', () => {
 
   it('does not double-record when both audio and network complete fire', async () => {
     const page = await openStudioPage();
-    await clickStudioSend(page);
+    await clickStudioGenerate(page);
     await new Promise((r) => setTimeout(r, 400));
 
     await page.evaluate(async () => {
@@ -131,11 +132,13 @@ describe('ElevenLabs adapter — Studio mode', () => {
     await page.close();
   });
 
-  it('captures prompt text from the Edit field', async () => {
+  it('captures prompt text and derives credits from prompt length', async () => {
     const page = await openStudioPage();
-    await clickStudioSend(page);
+    await clickStudioGenerate(page);
     await new Promise((r) => setTimeout(r, 400));
 
+    // The Studio quota display does not refresh after generation, so cost is
+    // derived from prompt length (1 credit/char). "Hello studio world" = 18 chars.
     await page.evaluate(() => {
       const audio = document.createElement('audio');
       audio.src = 'blob:https://elevenlabs.io/studio-audio-789';
@@ -146,29 +149,7 @@ describe('ElevenLabs adapter — Studio mode', () => {
 
     const records = await readExtensionRecords(browser);
     expect(records[0]!['prompt']).toBe('Hello studio world');
-    await page.close();
-  });
-
-  it('records a generation when Enter is pressed in the Edit field', async () => {
-    const page = await openStudioPage();
-
-    await page.evaluate(() => {
-      document.querySelector('[aria-label="Edit field"]')?.dispatchEvent(
-        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }),
-      );
-    });
-    await new Promise((r) => setTimeout(r, 400));
-
-    await page.evaluate(() => {
-      const audio = document.createElement('audio');
-      audio.src = 'blob:https://elevenlabs.io/studio-audio-enter';
-      document.body.appendChild(audio);
-    });
-
-    await new Promise((r) => setTimeout(r, 3_000));
-
-    const records = await readExtensionRecords(browser);
-    expect(records).toHaveLength(1);
+    expect(records[0]!['credits_used']).toBe(18);
     await page.close();
   });
 });

@@ -2,12 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>ElevenLabs Studio (mock)</title>
+  <title>ElevenLabs Studio audio editor (mock)</title>
 </head>
 <body>
-  <div>
-    <div aria-label="Edit field" contenteditable="true">Hello studio world</div>
-    <button aria-label="Send" type="button">Send</button>
-  </div>
+  <!-- Mirrors the 2026-07 Studio audio editor: plain "credits remaining" balance
+       (no stable attrs), a text-only "Generate" button, and a ProseMirror editor. -->
+  <header>
+    <span>10,000 credits remaining</span>
+    <button type="button">Generate</button>
+  </header>
+  <div class="tiptap ProseMirror" contenteditable="true">Hello studio world</div>
 </body>
 </html>

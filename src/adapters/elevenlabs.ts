@@ -1,25 +1,41 @@
-// ElevenLabs adapter — charges per character of synthesised text.
-// Complexity: Low (DOM observer only; no network parsing needed).
-// Studio mode (/app/studio/*) uses audio element observation — no balance in DOM.
+// ElevenLabs adapter — charges per character of synthesised text (1 credit = 1 char).
 //
-// SELECTORS: verified against elevenlabs.io as of 2026-07-14.
-// Update only the SEL constants if the UI changes — no logic changes needed.
-// (Exception: balance has no stable attributes in the 2026-07 UI, so
-// findBalanceEl() adds a text-scan fallback.)
+// Two capture surfaces share one flow (see Surface + captureGeneration):
+//   - Text to Speech  (/app/speech-synthesis/*)
+//   - Studio audio    (/app/studio/<project>) — the long-form editor
+// Both expose the same "N credits remaining" balance, a generate button, an
+// editable prompt, and the same completion signals (balance change, new audio
+// element, or synthesis API response). They differ only in selectors.
+//
+// SELECTORS: verified against elevenlabs.io as of 2026-07-17.
+// Balance has no stable attributes in the 2026-07 UI, so findBalanceEl() falls
+// back to a text scan. The Studio "Generate" button has no attributes either, so
+// it is matched by text via the surface's isGenerateButton guard.
 
 import { registerAdapter } from './registry.js';
 import { watchText, delegateClick } from '../util/dom-observer.js';
 import { interceptNetwork } from '../util/network-listener.js';
 import type { Adapter, AdapterContext } from './types.js';
 
-// Matches api.elevenlabs.io TTS synthesis endpoints
+// Matches api.elevenlabs.io synthesis endpoints
 const EL_API = /elevenlabs\.io/;
 
-// Studio selectors (elevenlabs.io/app/studio/*)
-const STUDIO = {
-  generateBtn: 'button[aria-label="Send"]',
-  prompt: '[aria-label="Edit field"]',
-} as const;
+// A capture surface: how to find the controls on one ElevenLabs page type.
+interface Surface {
+  name: string;
+  /** CSS selector for the generate button. May over-match when the button has
+   *  no stable attributes — isGenerateButton then confirms each click. */
+  generateBtn: string;
+  isGenerateButton?: (el: Element) => boolean;
+  /** CSS selector for the text input (textarea or contenteditable). */
+  prompt: string;
+  /** CSS selector for the model label, or null when the surface has none. */
+  model: string | null;
+  /** Model name to record when `model` is null or not found. */
+  defaultModel: string;
+  /** How long to wait for a completion signal before recording cost unknown. */
+  timeoutMs: number;
+}
 
 const SEL = {
   // Account quota display. Older UI: "9,500 / 10,000" characters with testid/class
@@ -37,9 +53,9 @@ const SEL = {
     '[aria-label*="characters remaining" i]',
     '[aria-label*="monthly quota" i]',
   ].join(', '),
-  // Primary generate / synthesise button (2026-07: data-testid="tts-generate",
+  // TTS generate button (2026-07: data-testid="tts-generate",
   // aria-label "Generate speech ⌘+Enter" — hence the prefix match)
-  generateBtn: [
+  ttsGenerateBtn: [
     'button[data-testid="generate-speech"]',
     'button[aria-label^="Generate speech"]',
     'button[data-testid="tts-generate"]',
@@ -47,16 +63,39 @@ const SEL = {
     'button[class*="generate-speech" i]',
   ].join(', '),
   // TTS text input (2026-07: div[contenteditable] with data-testid="tts-editor")
-  textArea:
-    'textarea[data-testid="editor-input"], textarea[aria-label*="text" i], div[contenteditable="true"][data-testid]',
-  // Selected voice model label (2026-07: button[data-testid="tts-model-selector"],
+  ttsPrompt:
+    'textarea[data-testid="editor-input"], textarea[data-testid="tts-editor"], textarea[aria-label*="text" i], div[contenteditable="true"][data-testid]',
+  // TTS model label (2026-07: button[data-testid="tts-model-selector"],
   // text content is the model name, e.g. "Eleven Multilingual v2")
-  model:
+  ttsModel:
     '[data-testid="tts-model-selector"], [data-testid="voice-model-name"], [class*="VoiceModelName"], [data-testid="model-selector"] [aria-selected="true"]',
 } as const;
 
+// Text to Speech page.
+const TTS_SURFACE: Surface = {
+  name: 'tts',
+  generateBtn: SEL.ttsGenerateBtn,
+  prompt: SEL.ttsPrompt,
+  model: SEL.ttsModel,
+  defaultModel: 'unknown',
+  timeoutMs: 60_000,
+};
+
+// Studio audio editor (/app/studio/<project>). 2026-07: the "Generate" button has
+// no attributes (matched by exact text), the prompt is a TipTap ProseMirror
+// contenteditable, and the model label is a plain div with no stable hook.
+const STUDIO_SURFACE: Surface = {
+  name: 'studio',
+  generateBtn: 'button',
+  isGenerateButton: (el) => el.textContent?.trim() === 'Generate',
+  prompt: '.tiptap.ProseMirror, div[contenteditable="true"]',
+  model: null,
+  defaultModel: 'Studio',
+  timeoutMs: 3 * 60_000,
+};
+
 // Balance text in the 2026-07 UI, e.g. "10,000 credits remaining".
-// ElevenLabs rebranded character quota as "credits" (1 credit = 1 character for TTS);
+// ElevenLabs rebranded character quota as "credits" (1 credit = 1 character);
 // parseChars extracts the number either way, so the delta logic is unit-agnostic.
 const BALANCE_TEXT_RE = /[\d,]+\s+(?:credits?|characters?)\s+remaining/i;
 
@@ -84,73 +123,105 @@ function makeIdempotent(fn: () => void): () => void {
   };
 }
 
-function mountStudio(context: AdapterContext, cleanups: Array<() => void>): void {
-  const startGeneration = () => {
-    if (context.isPaused()) { console.debug('[PL] el-studio: paused, skipping'); return; }
+// Shared capture flow for both surfaces: read the balance and prompt, then
+// complete on the first of three signals (balance change, new audio element,
+// synthesis API response), falling back to prompt length when the balance
+// display does not refresh (the 2026-07 UI updates it only on reload).
+function captureGeneration(
+  context: AdapterContext,
+  cleanups: Array<() => void>,
+  surface: Surface,
+): void {
+  if (context.isPaused()) return;
 
-    const promptEl = document.querySelector(STUDIO.prompt);
-    const promptText = promptEl?.textContent?.trim() || null;
+  const balanceEl = findBalanceEl();
+  const balanceBefore = balanceEl ? parseChars(balanceEl.textContent ?? '0') : 0;
+  const hasQuota = balanceEl !== null && balanceBefore > 0;
 
-    console.debug('[PL] el-studio: generation started', { prompt: promptText });
+  const textEl = document.querySelector(surface.prompt);
+  const prompt =
+    textEl instanceof HTMLTextAreaElement ? textEl.value : textEl?.textContent ?? null;
 
-    const sessionKey = context.start({ model: 'Studio', prompt: promptText, balance_before: null });
-    if (!sessionKey) return;
+  const modelEl = surface.model ? document.querySelector(surface.model) : null;
+  const model = modelEl?.textContent?.trim() || surface.defaultModel;
 
-    let completed = false;
+  console.debug(`[PL] el-${surface.name}: generation started`, { balanceBefore, model });
 
-    const existingAudioSrcs = new Set(
-      Array.from(document.querySelectorAll<HTMLAudioElement>('audio[src]')).map((a) => a.src),
+  const sessionKey = context.start({ model, prompt, balance_before: balanceBefore });
+  if (!sessionKey) return;
+
+  let completed = false;
+
+  // Snapshot existing audio sources so the observer only reacts to NEW ones
+  const existingAudioSrcs = new Set(
+    Array.from(document.querySelectorAll<HTMLAudioElement>('audio[src]')).map((a) => a.src),
+  );
+
+  const completeSession = (balanceAfter: number | null) => {
+    if (completed) return;
+    completed = true;
+    unwatchBalance();
+    audioObs.disconnect();
+    unwatchNet();
+    clearTimeout(timeout);
+    context.complete(sessionKey, { balance_after: balanceAfter });
+  };
+
+  const readBalance = (): number | null => {
+    const afterEl = findBalanceEl();
+    const after = afterEl ? parseChars(afterEl.textContent ?? '0') : null;
+    if (after === null || !hasQuota || after === balanceBefore) return null;
+    return after < balanceBefore
+      ? after
+      : Math.max(0, balanceBefore - (after - balanceBefore));
+  };
+
+  // The 2026-07 UI does not refresh the quota display after a generation (it
+  // only updates on page reload), so the DOM delta is usually unavailable.
+  // TTS/Studio charge 1 credit per character of submitted text (verified live
+  // 2026-07-14: 68 chars → 68 credits), so derive the balance from prompt length.
+  const promptChars = prompt?.length ?? 0;
+  const derivedBalance = (): number | null =>
+    hasQuota && promptChars > 0 ? Math.max(0, balanceBefore - promptChars) : null;
+
+  // ── Path 1: quota counter changes (paid plans that do refresh) ──
+  let unwatchBalance = () => {};
+  if (hasQuota) {
+    unwatchBalance = makeIdempotent(
+      watchText(findBalanceEl, (current) => {
+        const after = parseChars(current);
+        if (after === balanceBefore) return;
+        const normalised = after < balanceBefore
+          ? after
+          : Math.max(0, balanceBefore - (after - balanceBefore));
+        completeSession(normalised);
+      }),
     );
+  }
 
-    const finish = () => {
-      if (completed) return;
-      completed = true;
-      audioObs.disconnect();
-      unwatchNet();
-      clearTimeout(timeout);
-    };
+  // ── Path 2: NEW audio element appears ──
+  const audioObs = new MutationObserver(() => {
+    if (completed) { audioObs.disconnect(); return; }
+    const audio = document.querySelector<HTMLAudioElement>('audio[src]:not([src=""])');
+    if (!audio?.src || existingAudioSrcs.has(audio.src)) return;
+    completeSession(readBalance() ?? derivedBalance());
+  });
+  audioObs.observe(document.body, {
+    subtree: true, childList: true,
+    attributes: true, attributeFilter: ['src'],
+  });
 
-    const completeSession = (balanceAfter: number | null) => {
-      finish();
-      context.complete(sessionKey, { balance_after: balanceAfter });
-    };
+  // ── Path 3: synthesis API response ──
+  const unwatchNet = makeIdempotent(
+    interceptNetwork(EL_API, ({ url }) => {
+      if (surface.name === 'studio' && !/content\/generations|studio|chapter/i.test(url)) return;
+      completeSession(readBalance() ?? derivedBalance());
+    }),
+  );
 
-    // Path 1: new audio element appears in the timeline
-    const audioObs = new MutationObserver(() => {
-      if (completed) { audioObs.disconnect(); return; }
-      const audio = document.querySelector<HTMLAudioElement>('audio[src]:not([src=""])');
-      if (!audio?.src || existingAudioSrcs.has(audio.src)) return;
-      console.debug('[PL] el-studio: completing via audio element');
-      completeSession(null);
-    });
-    audioObs.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['src'] });
+  const timeout = setTimeout(() => completeSession(null), surface.timeoutMs);
 
-    // Path 2: any ElevenLabs API response fires after the generation
-    const unwatchNet = interceptNetwork(EL_API, ({ url }) => {
-      if (completed || !/content\/generations/.test(url)) return;
-      console.debug('[PL] el-studio: completing via network', { url });
-      completeSession(null);
-    });
-
-    const timeout = setTimeout(() => {
-      console.debug('[PL] el-studio: timed out');
-      completeSession(null);
-    }, 3 * 60_000);
-
-    cleanups.push(() => { finish(); clearTimeout(timeout); });
-  };
-
-  cleanups.push(delegateClick(STUDIO.generateBtn, startGeneration));
-
-  const keyHandler = (event: Event) => {
-    const ke = event as KeyboardEvent;
-    if (ke.key !== 'Enter' || ke.shiftKey) return;
-    const target = ke.target as Element | null;
-    if (!target?.closest(STUDIO.prompt)) return;
-    startGeneration();
-  };
-  document.addEventListener('keydown', keyHandler, true);
-  cleanups.push(() => document.removeEventListener('keydown', keyHandler, true));
+  cleanups.push(() => { completeSession(null); clearTimeout(timeout); });
 }
 
 function createElevenLabsAdapter(): Adapter {
@@ -160,111 +231,14 @@ function createElevenLabsAdapter(): Adapter {
     tool: 'elevenlabs',
 
     mount(context: AdapterContext): void {
-      // Studio pages use a different UI — delegate to Studio handler
-      if (location.pathname.startsWith('/app/studio')) {
-        mountStudio(context, cleanups);
-        return;
-      }
+      const surface = location.pathname.startsWith('/app/studio')
+        ? STUDIO_SURFACE
+        : TTS_SURFACE;
 
       cleanups.push(
-        delegateClick(SEL.generateBtn, () => {
-          if (context.isPaused()) return;
-
-          const balanceEl = findBalanceEl();
-          const balanceBefore = balanceEl ? parseChars(balanceEl.textContent ?? '0') : 0;
-          const hasQuota = balanceEl !== null && balanceBefore > 0;
-
-          const textEl = document.querySelector(SEL.textArea);
-          const prompt =
-            textEl instanceof HTMLTextAreaElement
-              ? textEl.value
-              : textEl?.textContent ?? null;
-
-          const modelEl = document.querySelector(SEL.model);
-
-          const sessionKey = context.start({
-            model: modelEl?.textContent?.trim() ?? 'unknown',
-            prompt,
-            balance_before: balanceBefore,
-          });
-          if (!sessionKey) return;
-
-          let completed = false;
-
-          // Snapshot existing audio sources so the observer only reacts to NEW ones
-          const existingAudioSrcs = new Set(
-            Array.from(document.querySelectorAll<HTMLAudioElement>('audio[src]')).map((a) => a.src),
-          );
-
-          const completeSession = (balanceAfter: number | null) => {
-            if (completed) return;
-            completed = true;
-            unwatchBalance();
-            audioObs.disconnect();
-            unwatchNet();
-            clearTimeout(timeout);
-            context.complete(sessionKey, { balance_after: balanceAfter });
-          };
-
-          const readBalance = (): number | null => {
-            const afterEl = findBalanceEl();
-            const after = afterEl ? parseChars(afterEl.textContent ?? '0') : null;
-            if (after === null || !hasQuota || after === balanceBefore) return null;
-            return after < balanceBefore
-              ? after
-              : Math.max(0, balanceBefore - (after - balanceBefore));
-          };
-
-          // The 2026-07 UI does not refresh the quota display after a generation
-          // (it only updates on page reload), so the DOM delta is usually
-          // unavailable. Standard TTS charges exactly 1 credit per character of
-          // submitted text (verified live 2026-07-14: 68 chars → 68 credits), so
-          // derive the post-generation balance from the prompt length instead.
-          const promptChars = prompt?.length ?? 0;
-          const derivedBalance = (): number | null =>
-            hasQuota && promptChars > 0
-              ? Math.max(0, balanceBefore - promptChars)
-              : null;
-
-          // ── Path 1: quota counter changes (paid plans) ──
-          let unwatchBalance = () => {};
-          if (hasQuota) {
-            unwatchBalance = makeIdempotent(
-              watchText(findBalanceEl, (current) => {
-                const after = parseChars(current);
-                if (after === balanceBefore) return;
-                const normalised = after < balanceBefore
-                  ? after
-                  : Math.max(0, balanceBefore - (after - balanceBefore));
-                completeSession(normalised);
-              }),
-            );
-          }
-
-          // ── Path 2: NEW audio element appears (free plans + reliable fallback) ──
-          const audioObs = new MutationObserver(() => {
-            if (completed) { audioObs.disconnect(); return; }
-            const audio = document.querySelector<HTMLAudioElement>('audio[src]:not([src=""])');
-            if (!audio?.src || existingAudioSrcs.has(audio.src)) return;
-            completeSession(readBalance() ?? derivedBalance());
-          });
-          audioObs.observe(document.body, {
-            subtree: true, childList: true,
-            attributes: true, attributeFilter: ['src'],
-          });
-
-          // ── Path 3: API response (most reliable — fires when synthesis completes) ──
-          const unwatchNet = makeIdempotent(
-            interceptNetwork(EL_API, () => {
-              completeSession(readBalance() ?? derivedBalance());
-            }),
-          );
-
-          const timeout = setTimeout(() => {
-            completeSession(null);
-          }, 60_000);
-
-          cleanups.push(() => { completeSession(null); clearTimeout(timeout); });
+        delegateClick(surface.generateBtn, (el) => {
+          if (surface.isGenerateButton && !surface.isGenerateButton(el)) return;
+          captureGeneration(context, cleanups, surface);
         }),
       );
     },
