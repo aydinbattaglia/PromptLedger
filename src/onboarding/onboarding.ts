@@ -1,4 +1,5 @@
 import { KNOWN_PLANS, planOptionLabel } from '../plans/data.js';
+import { isExperimental } from '../types/index.js';
 
 const TOOLS = ['runway', 'midjourney', 'elevenlabs'] as const;
 type Tool = typeof TOOLS[number];
@@ -45,8 +46,17 @@ async function render(): Promise<void> {
 
     select.addEventListener('change', () => void onPlanSelect(tool, select.value));
 
-    card.innerHTML = `<span class="tool-name">${tool}</span>`;
+    const experimental = isExperimental(tool);
+    card.innerHTML = `<span class="tool-name">${tool}${experimental ? '<span class="exp-badge">Experimental</span>' : ''}</span>`;
     card.appendChild(select);
+    if (experimental) {
+      card.style.flexWrap = 'wrap';
+      const note = document.createElement('div');
+      note.className = 'tool-note';
+      note.style.width = '100%';
+      note.textContent = 'Midjourney capture is not yet reliable — costs may be missing or incomplete.';
+      card.appendChild(note);
+    }
     container.appendChild(card);
   }
 

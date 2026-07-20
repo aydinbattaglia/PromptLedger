@@ -2,12 +2,20 @@
 // Complexity: Medium — GPU time units, SPA prompt submission.
 // Target: midjourney.com (web app, NOT Discord bot).
 //
-// SELECTORS: partially verified against midjourney.com 2026-07-14 (unsubscribed
-// account — creation UI disabled). CONFIRMED: the live app uses NO data-testid
-// attributes at all, so every testid-based selector below is dead weight kept only
-// as a fallback. The prompt textarea is id="desktop_input_bar" (verified live).
-// generateBtn / balance / model need re-verification on a SUBSCRIBED account —
-// the create button, fast-hours display, and model label do not render without one.
+// STATUS: EXPERIMENTAL — this adapter does not currently capture generations.
+// Verified on a subscribed Basic account 2026-07-17:
+//   - The web app has NO generate button and NO <form>: generation is submitted
+//     with the ENTER key on the prompt input. delegateClick(generateBtn) never
+//     fires, so nothing below runs. A rewrite must hook the Enter key instead.
+//   - Remaining Fast hours ("3h 20m / 3h 20m") appear ONLY on /account, never on
+//     the create page — so a per-prompt balance delta cannot be read at gen time.
+//     A viable rewrite would intercept MJ's job-submit API and reconcile GPU time
+//     from /account separately.
+//   - parseGpuHours also needs to handle the "3h 20m" (h/m) format, not just hr/min.
+//   - The app uses NO data-testid attributes; only the prompt (#desktop_input_bar)
+//     has a stable hook. Model version ("8.1") shows only in the open settings panel.
+// Midjourney is flagged via EXPERIMENTAL_TOOLS (src/types) and surfaced as such in
+// onboarding/help. The adapter stays registered so the plan detector still runs.
 
 import { registerAdapter } from './registry.js';
 import { watchText, delegateClick } from '../util/dom-observer.js';

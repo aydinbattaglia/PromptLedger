@@ -1,5 +1,16 @@
 export type ToolId = 'runway' | 'midjourney' | 'elevenlabs' | 'pika' | 'udio';
 
+// Tools whose capture is not yet reliable and are surfaced as "experimental" in
+// the UI. Midjourney (2026-07): the web app submits via the Enter key with no
+// generate button, and shows Fast-hours balance only on /account (not the create
+// page), so the balance-delta capture strategy cannot attribute cost to a prompt.
+// A network-interception rewrite is needed before it can be marked supported.
+export const EXPERIMENTAL_TOOLS: ReadonlySet<ToolId> = new Set(['midjourney']);
+
+export function isExperimental(tool: ToolId): boolean {
+  return EXPERIMENTAL_TOOLS.has(tool);
+}
+
 export interface GenerationRecord {
   id: string;
   timestamp: string;

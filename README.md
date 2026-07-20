@@ -2,9 +2,9 @@
 
 Per-prompt cost and usage tracking for AI creative tools. A Manifest V3 Chrome
 extension that records what each generation actually costs you on
-[Runway](https://runwayml.com), [ElevenLabs](https://elevenlabs.io), and
-[Midjourney](https://midjourney.com) — credits, characters, and GPU hours,
-normalised to money.
+[Runway](https://runwayml.com) and [ElevenLabs](https://elevenlabs.io) —
+credits and characters, normalised to money.
+[Midjourney](https://midjourney.com) support is **experimental** (see below).
 
 **[Install from the Chrome Web Store](https://chromewebstore.google.com/detail/cbciekapacldpgpkgclpfmdnhcljjbmi)**
 
@@ -44,6 +44,16 @@ them in IndexedDB.
 Tool UIs change without notice; when selectors drift, the popup's health
 banner will tell you rather than silently dropping data. Selectors live in
 `SEL` constants at the top of each adapter for easy patching.
+
+### Midjourney (experimental)
+
+Midjourney's web app doesn't fit the balance-delta model: it submits
+generations via the Enter key (no generate button), and shows remaining Fast
+GPU hours only on the `/account` page, never on the create page — so a cost
+can't be attributed to an individual prompt. Reliable capture would require
+intercepting Midjourney's job API and reconciling GPU time separately. Until
+that lands, Midjourney is surfaced as experimental and its generations may be
+recorded without a cost.
 
 ## Development
 

@@ -339,7 +339,7 @@
           <div class="step-num">1</div>
           <div class="step-body">
             <strong>Visit your billing page on each tool</strong>
-            <span>PromptLedger's plan detector runs automatically on Runway, Midjourney, and ElevenLabs billing pages and saves your credit rate. You can also set a rate manually from the popup.</span>
+            <span>PromptLedger's plan detector runs automatically on Runway and ElevenLabs billing pages and saves your credit rate. You can also set a rate manually from the popup. (Midjourney support is experimental.)</span>
           </div>
         </div>
         <div class="step">
@@ -368,7 +368,7 @@
       <p>Rates are detected automatically from your billing page or set manually in the popup. You can override a detected rate at any time.</p>
 
       <h3>Credit delta</h3>
-      <p>When a generation starts, the extension reads your current balance. When it completes, it reads your balance again. The difference is <code>credits_used</code>. This works across all three tools even though they use different balance formats (Runway: credits, Midjourney: GPU hours, ElevenLabs: characters).</p>
+      <p>When a generation starts, the extension reads your current balance. When it completes, it reads your balance again. The difference is <code>credits_used</code>. Runway (credits) and ElevenLabs (characters) are fully supported. Midjourney is experimental — its web app doesn't expose a per-generation balance, so costs may be missing.</p>
     </div>
 
     <!-- ── Log table fields ── -->
