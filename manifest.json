@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "PromptLedger",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Per-prompt cost and usage tracking for AI creative tools",
   "permissions": [
     "storage",
