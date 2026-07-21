@@ -11,21 +11,22 @@
     h2 { font-size: 1rem; margin-top: 28px; }
     ul { padding-left: 20px; }
     li { margin-bottom: 4px; }
+    code { background: #f2f2f5; padding: 1px 4px; border-radius: 3px; }
   </style>
 </head>
 <body>
   <h1>PromptLedger Privacy Policy</h1>
-  <p class="updated">Last updated: May 2026</p>
+  <p class="updated">Last updated: July 2026</p>
 
   <p>PromptLedger is a browser extension that tracks credit usage on AI creative tools. All data is stored locally on your device. Nothing is sent to any server operated by PromptLedger.</p>
 
   <h2>Data stored locally</h2>
-  <p>PromptLedger stores the following in your browser's IndexedDB:</p>
+  <p>PromptLedger stores the following in your browser's IndexedDB and extension storage:</p>
   <ul>
-    <li>Prompt text submitted to supported tools (Runway, Midjourney, ElevenLabs)</li>
+    <li>Prompt text submitted to supported tools (Runway and ElevenLabs; Midjourney support is experimental)</li>
     <li>Credits used and estimated cost per generation</li>
     <li>Timestamp, model name, and optional project tag per generation</li>
-    <li>User-configured settings (budget limits, display currency, plan rates)</li>
+    <li>User-configured settings (budget limits, display currency, detected plan rates)</li>
   </ul>
   <p>This data never leaves your device and is never transmitted to PromptLedger or any third party.</p>
 
@@ -38,10 +39,10 @@
   <h2>Permissions</h2>
   <ul>
     <li><strong>storage</strong> — saves generation records and settings locally</li>
-    <li><strong>tabs</strong> — opens the onboarding page on first install</li>
     <li><strong>notifications</strong> — sends budget alerts when spend limits are reached</li>
     <li><strong>alarms</strong> — schedules the daily exchange rate refresh</li>
-    <li><strong>Host permissions</strong> (runwayml.com, midjourney.com, elevenlabs.io) — injects content scripts that observe credit balance changes on these sites only</li>
+    <li><strong>Host permissions</strong> (runwayml.com, midjourney.com, elevenlabs.io) — inject content scripts that observe credit balance changes on these sites only</li>
+    <li><strong>Host permission</strong> (api.frankfurter.app) — used solely for the daily exchange-rate fetch described above</li>
   </ul>
 
   <h2>Contact</h2>
