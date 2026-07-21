@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PromptLedger — Know what every AI generation costs</title>
+<meta name="description" content="A free Chrome extension that tracks the real cost of every generation on Runway and ElevenLabs — per prompt, in real money. Private, local-only." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 15 15'%3E%3Crect x='2' y='1' width='10' height='13' rx='1.75' fill='none' stroke='%231c6b4a' stroke-width='1.35'/%3E%3Cpath d='M4.5 5h6M4.5 7.75h6M4.5 10.5h3.5' stroke='%231c6b4a' stroke-width='1.15' stroke-linecap='round'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paper: #f6f2e9;
+    --paper-2: #fbf9f3;
+    --ink: #17150f;
+    --ink-2: #57534738;
+    --ink-muted: #6b6555;
+    --rule: #ddd6c5;
+    --rule-strong: #c9c0aa;
+    --money: #1c6b4a;
+    --money-tint: #e7efe8;
+    --flag: #b5710a;
+    --brand: #2b3a67;
+    --shadow: 24px 30px 60px -30px rgba(40,34,20,0.35);
+    --serif: 'Fraunces', Georgia, serif;
+    --sans: 'Instrument Sans', system-ui, sans-serif;
+    --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #14130f;
+      --paper-2: #1c1a15;
+      --ink: #f2ede0;
+      --ink-2: #f2ede015;
+      --ink-muted: #a29a85;
+      --rule: #2e2b22;
+      --rule-strong: #403c30;
+      --money: #56b487;
+      --money-tint: #17271f;
+      --flag: #d69a3c;
+      --brand: #9fb0e0;
+      --shadow: 24px 30px 60px -30px rgba(0,0,0,0.6);
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--sans);
+    background-color: var(--paper);
+    background-image:
+      radial-gradient(circle at 15% 0%, rgba(28,107,74,0.05), transparent 45%),
+      radial-gradient(circle at 100% 8%, rgba(43,58,103,0.05), transparent 40%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.028'/%3E%3C/svg%3E");
+    color: var(--ink);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  a { color: inherit; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 28px; }
+
+  /* ── Header ── */
+  header {
+    position: sticky; top: 0; z-index: 50;
+    backdrop-filter: blur(10px);
+    background: color-mix(in srgb, var(--paper) 82%, transparent);
+    border-bottom: 1px solid var(--rule);
+  }
+  .nav { display: flex; align-items: center; justify-content: space-between; height: 66px; }
+  .brand { display: flex; align-items: center; gap: 9px; font-family: var(--serif); font-weight: 600; font-size: 20px; letter-spacing: -0.01em; }
+  .brand svg { color: var(--money); flex-shrink: 0; }
+  .brand b { font-weight: 600; }
+  .brand i { font-style: normal; color: var(--ink-muted); }
+  .nav-cta {
+    font-family: var(--mono); font-size: 12.5px; font-weight: 500; letter-spacing: -0.01em;
+    text-decoration: none; color: var(--paper-2); background: var(--ink);
+    padding: 9px 16px; border-radius: 7px; transition: transform .15s ease, background .15s ease;
+    white-space: nowrap;
+  }
+  .nav-cta:hover { transform: translateY(-1px); background: var(--money); }
+
+  /* ── Hero ── */
+  .hero { padding: 76px 0 40px; display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 58px; align-items: center; }
+  .kicker {
+    font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: 0.02em;
+    color: var(--money); text-transform: uppercase;
+    display: inline-flex; align-items: center; gap: 9px; margin-bottom: 22px;
+  }
+  .kicker::before { content: ""; width: 22px; height: 1px; background: var(--money); display: inline-block; }
+  h1 {
+    font-family: var(--serif); font-weight: 600; font-size: clamp(2.5rem, 5.4vw, 4.05rem);
+    line-height: 1.02; letter-spacing: -0.025em; margin-bottom: 24px;
+  }
+  h1 .em { font-style: italic; font-weight: 500; color: var(--money); }
+  .lede { font-size: 1.18rem; color: var(--ink-muted); max-width: 30em; margin-bottom: 34px; }
+  .cta-row { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-family: var(--sans); font-weight: 600; font-size: 1rem; text-decoration: none;
+    color: var(--paper-2); background: var(--ink);
+    padding: 15px 26px; border-radius: 10px;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.15) inset, 0 10px 24px -12px rgba(23,21,15,0.6);
+    transition: transform .16s ease, background .16s ease;
+  }
+  .btn-primary:hover { transform: translateY(-2px); background: var(--money); }
+  .btn-primary svg { flex-shrink: 0; }
+  .btn-ghost { font-family: var(--mono); font-size: 13px; color: var(--ink-muted); text-decoration: none; border-bottom: 1px solid var(--rule-strong); padding-bottom: 2px; transition: color .15s; }
+  .btn-ghost:hover { color: var(--ink); }
+  .hero-meta { margin-top: 26px; font-family: var(--mono); font-size: 12px; color: var(--ink-muted); display: flex; gap: 18px; flex-wrap: wrap; }
+  .hero-meta span { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--money); }
+
+  /* ── Ledger card ── */
+  .ledger {
+    background: var(--paper-2);
+    border: 1px solid var(--rule-strong);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    transform: rotate(0.5deg);
+  }
+  .ledger-head { padding: 20px 24px 16px; border-bottom: 1px solid var(--rule); display: flex; align-items: baseline; justify-content: space-between; }
+  .ledger-head .lbl { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-muted); }
+  .ledger-head .cnt { font-family: var(--mono); font-size: 12px; color: var(--ink-muted); }
+  .ledger-rows { padding: 6px 0; }
+  .lrow {
+    display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: baseline;
+    padding: 11px 24px; border-bottom: 1px solid var(--rule);
+    opacity: 0; transform: translateY(6px); animation: rowin .5s cubic-bezier(.2,.7,.3,1) forwards;
+  }
+  .lrow:last-child { border-bottom: 0; }
+  .lrow .tool { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--money); }
+  .lrow .prompt { font-size: 13.5px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 24ch; }
+  .lrow .figs { text-align: right; white-space: nowrap; }
+  .lrow .cr { font-family: var(--mono); font-size: 11px; color: var(--ink-muted); margin-right: 12px; }
+  .lrow .cost { font-family: var(--mono); font-size: 13.5px; font-weight: 500; color: var(--money); }
+  @keyframes rowin { to { opacity: 1; transform: none; } }
+  .ledger-total {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding: 16px 24px 20px; margin-top: 2px;
+    border-top: 3px double var(--rule-strong);
+  }
+  .ledger-total .t-lbl { font-family: var(--serif); font-size: 15px; font-weight: 600; }
+  .ledger-total .t-val { font-family: var(--mono); font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
+  .ledger-cap { text-align: center; font-family: var(--mono); font-size: 11px; color: var(--ink-muted); margin-top: 16px; }
+
+  /* ── Section scaffolding ── */
+  section { padding: 62px 0; }
+  .sec-kick { font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--money); margin-bottom: 14px; }
+  h2 { font-family: var(--serif); font-weight: 600; font-size: clamp(1.8rem, 3.4vw, 2.6rem); line-height: 1.08; letter-spacing: -0.02em; margin-bottom: 18px; }
+  .sec-lede { font-size: 1.1rem; color: var(--ink-muted); max-width: 40em; }
+
+  /* problem strip */
+  .problem { border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); background: var(--paper-2); }
+  .units { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; margin-top: 34px; }
+  .unit { background: var(--paper-2); padding: 26px 24px; }
+  .unit .u-tool { font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink); margin-bottom: 8px; }
+  .unit .u-unit { font-family: var(--serif); font-style: italic; font-size: 1.35rem; color: var(--money); margin-bottom: 8px; }
+  .unit .u-desc { font-size: 0.94rem; color: var(--ink-muted); }
+
+  /* steps */
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px; margin-top: 40px; }
+  .step { position: relative; padding-top: 26px; border-top: 2px solid var(--ink); }
+  .step .n { font-family: var(--mono); font-size: 12px; color: var(--ink-muted); position: absolute; top: 10px; right: 0; }
+  .step h3 { font-family: var(--serif); font-weight: 600; font-size: 1.3rem; margin-bottom: 8px; letter-spacing: -0.01em; }
+  .step p { color: var(--ink-muted); font-size: 0.97rem; }
+
+  /* features */
+  .feat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 14px; overflow: hidden; margin-top: 42px; }
+  .feat { background: var(--paper-2); padding: 30px 26px; transition: background .2s; }
+  .feat:hover { background: var(--money-tint); }
+  .feat .ico { color: var(--money); margin-bottom: 16px; display: block; }
+  .feat h3 { font-family: var(--serif); font-weight: 600; font-size: 1.18rem; margin-bottom: 7px; letter-spacing: -0.01em; }
+  .feat p { color: var(--ink-muted); font-size: 0.93rem; }
+
+  /* tools */
+  .tools { border-top: 1px solid var(--rule); background: var(--paper-2); }
+  .tool-list { margin-top: 36px; border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; }
+  .tool-item { display: grid; grid-template-columns: auto 1fr auto; gap: 18px; align-items: center; padding: 22px 26px; border-bottom: 1px solid var(--rule); }
+  .tool-item:last-child { border-bottom: 0; }
+  .tool-item .tname { font-family: var(--serif); font-weight: 600; font-size: 1.25rem; }
+  .tool-item .tdesc { color: var(--ink-muted); font-size: 0.95rem; }
+  .badge { font-family: var(--mono); font-size: 11px; font-weight: 500; padding: 5px 11px; border-radius: 20px; white-space: nowrap; }
+  .badge.ok { color: var(--money); background: var(--money-tint); border: 1px solid color-mix(in srgb, var(--money) 30%, transparent); }
+  .badge.exp { color: var(--flag); background: color-mix(in srgb, var(--flag) 12%, transparent); border: 1px solid color-mix(in srgb, var(--flag) 32%, transparent); }
+  .check { color: var(--money); flex-shrink: 0; }
+
+  /* privacy */
+  .privacy-card { margin-top: 6px; display: grid; grid-template-columns: auto 1fr; gap: 28px; align-items: center; padding: 40px; border: 1px solid var(--rule-strong); border-radius: 16px; background: var(--paper-2); box-shadow: var(--shadow); }
+  .privacy-card .seal { color: var(--money); }
+  .privacy-card h2 { margin-bottom: 12px; }
+  .privacy-card p { color: var(--ink-muted); max-width: 46em; }
+  .privacy-card a { color: var(--money); text-underline-offset: 3px; }
+
+  /* final cta */
+  .final { text-align: center; padding: 84px 0 72px; }
+  .final h2 { font-size: clamp(2rem, 4.6vw, 3.2rem); margin-bottom: 24px; }
+  .final .btn-primary { font-size: 1.08rem; padding: 17px 32px; }
+  .final .fine { margin-top: 20px; font-family: var(--mono); font-size: 12px; color: var(--ink-muted); }
+
+  /* footer */
+  footer { border-top: 1px solid var(--rule); padding: 34px 0; }
+  .foot { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; font-family: var(--mono); font-size: 12.5px; color: var(--ink-muted); }
+  .foot a { text-decoration: none; color: var(--ink-muted); transition: color .15s; }
+  .foot a:hover { color: var(--money); }
+  .foot .links { display: flex; gap: 22px; flex-wrap: wrap; }
+
+  .reveal { opacity: 0; transform: translateY(14px); transition: opacity .7s ease, transform .7s ease; }
+  .reveal.in { opacity: 1; transform: none; }
+
+  @media (max-width: 860px) {
+    .hero { grid-template-columns: 1fr; gap: 44px; padding-top: 52px; }
+    .ledger { transform: none; max-width: 460px; }
+    .units, .steps, .feat-grid { grid-template-columns: 1fr; }
+    .feat-grid, .units { border-radius: 12px; }
+    .privacy-card { grid-template-columns: 1fr; text-align: left; padding: 30px; }
+    .tool-item { grid-template-columns: auto 1fr; }
+    .tool-item .badge { grid-column: 2; justify-self: start; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .lrow, .reveal { animation: none !important; opacity: 1 !important; transform: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="/PromptLedger/" style="text-decoration:none">
+      <svg width="20" height="20" viewBox="0 0 15 15" fill="none"><rect x="2" y="1" width="10" height="13" rx="1.75" stroke="currentColor" stroke-width="1.35"/><path d="M4.5 5h6M4.5 7.75h6M4.5 10.5h3.5" stroke="currentColor" stroke-width="1.15" stroke-linecap="round"/></svg>
+      <span><b>Prompt</b><i>Ledger</i></span>
+    </a>
+    <a class="nav-cta" href="https://chromewebstore.google.com/detail/cbciekapacldpgpkgclpfmdnhcljjbmi" target="_blank" rel="noopener">Add to Chrome</a>
+  </div>
+</header>
+
+<main>
+  <!-- HERO -->
+  <section class="hero wrap" style="padding-top:76px">
+    <div>
+      <span class="kicker">Chrome extension · Free</span>
+      <h1>Know what every AI&nbsp;generation <span class="em">actually costs.</span></h1>
+      <p class="lede">Runway and ElevenLabs bill in credits and characters — never in dollars, never per prompt. PromptLedger watches your generations and keeps the receipt.</p>
+      <div class="cta-row">
+        <a class="btn-primary" href="https://chromewebstore.google.com/detail/cbciekapacldpgpkgclpfmdnhcljjbmi" target="_blank" rel="noopener">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.2" stroke="currentColor" stroke-width="1.6"/><path d="M12 7.5h8M8.2 9.6l3.8 6.6M15.8 9.6l-3.8 6.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          Add to Chrome — Free
+        </a>
+        <a class="btn-ghost" href="#how">See how it works ↓</a>
+      </div>
+      <div class="hero-meta">
+        <span><i class="dot"></i> No account</span>
+        <span><i class="dot"></i> Stored locally</span>
+        <span><i class="dot"></i> No telemetry</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="ledger" aria-hidden="true">
+        <div class="ledger-head">
+          <span class="lbl">Today · this browser</span>
+          <span class="cnt">5 generations</span>
+        </div>
+        <div class="ledger-rows">
+          <div class="lrow" style="animation-delay:.15s"><div><span class="tool">Runway</span><div class="prompt">Cinematic crane shot, morning fog</div></div><div class="figs"><span class="cr">25 cr</span><span class="cost">$0.25</span></div></div>
+          <div class="lrow" style="animation-delay:.28s"><div><span class="tool">ElevenLabs</span><div class="prompt">Product launch VO, take 2</div></div><div class="figs"><span class="cr">1,240 cr</span><span class="cost">$0.06</span></div></div>
+          <div class="lrow" style="animation-delay:.41s"><div><span class="tool">Runway</span><div class="prompt">Abstract fluid sim, teal palette</div></div><div class="figs"><span class="cr">10 cr</span><span class="cost">$0.10</span></div></div>
+          <div class="lrow" style="animation-delay:.54s"><div><span class="tool">ElevenLabs</span><div class="prompt">Studio · chapter 3 narration</div></div><div class="figs"><span class="cr">880 cr</span><span class="cost">$0.04</span></div></div>
+          <div class="lrow" style="animation-delay:.67s"><div><span class="tool">Runway</span><div class="prompt">Time-lapse storm over ridgeline</div></div><div class="figs"><span class="cr">25 cr</span><span class="cost">$0.25</span></div></div>
+        </div>
+        <div class="ledger-total">
+          <span class="t-lbl">Total today</span>
+          <span class="t-val" id="total">$0.70</span>
+        </div>
+      </div>
+      <p class="ledger-cap">Every prompt · every tool · tallied automatically</p>
+    </div>
+  </section>
+
+  <!-- PROBLEM -->
+  <section class="problem">
+    <div class="wrap">
+      <div class="sec-kick">The problem</div>
+      <h2>Credits are designed to be&nbsp;confusing.</h2>
+      <p class="sec-lede">Each tool invents its own unit and hides the exchange rate. You find out what a project cost only after you've spent it.</p>
+      <div class="units">
+        <div class="unit"><div class="u-tool">Runway</div><div class="u-unit">credits</div><div class="u-desc">A number that means nothing until you divide by your plan's dollar rate.</div></div>
+        <div class="unit"><div class="u-tool">ElevenLabs</div><div class="u-unit">characters</div><div class="u-desc">Now rebranded "credits" — priced per character, tracked nowhere per clip.</div></div>
+        <div class="unit"><div class="u-tool">Midjourney</div><div class="u-unit">GPU hours</div><div class="u-desc">You buy compute time, not images, and burn it at a rate you can't see.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW -->
+  <section id="how" class="wrap">
+    <div class="sec-kick">How it works</div>
+    <h2>Three steps. Then never think about it&nbsp;again.</h2>
+    <div class="steps">
+      <div class="step reveal"><span class="n">01</span><h3>Install &amp; set your plan</h3><p>Add the extension and pick your plan — or let it read the rate from your billing page automatically.</p></div>
+      <div class="step reveal"><span class="n">02</span><h3>Generate as normal</h3><p>Keep working. PromptLedger notes each generation's credit change in the background — zero workflow change.</p></div>
+      <div class="step reveal"><span class="n">03</span><h3>Read the ledger</h3><p>Open the dashboard for cost over time, spend by tool, per-project totals, and a one-click CSV export.</p></div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="wrap">
+    <div class="sec-kick">What you get</div>
+    <h2>A real ledger for your prompts.</h2>
+    <div class="feat-grid">
+      <div class="feat"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><h3>Per-prompt capture</h3><p>Prompt, model, credits, and dollar cost recorded for every single generation.</p></div>
+      <div class="feat"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.3" stroke="currentColor" stroke-width="1.7"/><path d="M12 7.5v9M9.6 9.4h3.2a1.9 1.9 0 010 3.8h-2.4a1.9 1.9 0 000 3.8H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><h3>Credits → real money</h3><p>Your actual plan rate turns opaque credits into dollars, in the currency you choose.</p></div>
+      <div class="feat"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 19V5M4 19h16M8 15l3.5-4 3 2.5L20 8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><h3>Dashboard &amp; CSV</h3><p>Charts for spend over time and by tool, a filterable log, and export whenever you need it.</p></div>
+      <div class="feat"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 7.5A2.5 2.5 0 016.5 5H11l2 2.5h5A2.5 2.5 0 0120.5 10v7A2.5 2.5 0 0118 19.5H6.5A2.5 2.5 0 014 17z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg><h3>Project tags</h3><p>Group generations by client or job — even retroactively. Bill exactly what a project cost.</p></div>
+      <div class="feat"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 4l7 3v5c0 4.2-2.9 6.8-7 8-4.1-1.2-7-3.8-7-8V7z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9.3 12l1.9 1.9 3.5-3.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><h3>Budget alerts</h3><p>Set daily or monthly limits per tool and get a heads-up before you blow past them.</p></div>
+      <div class="feat"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="5" y="10" width="14" height="9.5" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M8 10V7.5a4 4 0 018 0V10" stroke="currentColor" stroke-width="1.7"/></svg><h3>Private by design</h3><p>Everything stays in your browser. No accounts, no servers, no telemetry — ever.</p></div>
+    </div>
+  </section>
+
+  <!-- TOOLS -->
+  <section class="tools">
+    <div class="wrap">
+      <div class="sec-kick">Supported tools</div>
+      <h2>Honest about what works.</h2>
+      <div class="tool-list">
+        <div class="tool-item">
+          <svg class="check" width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.5" stroke="currentColor" stroke-width="1.6"/><path d="M8 12.2l2.6 2.6L16 9.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div><div class="tname">Runway</div><div class="tdesc">Credits per generation, verified end-to-end.</div></div>
+          <span class="badge ok">Fully supported</span>
+        </div>
+        <div class="tool-item">
+          <svg class="check" width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.5" stroke="currentColor" stroke-width="1.6"/><path d="M8 12.2l2.6 2.6L16 9.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div><div class="tname">ElevenLabs</div><div class="tdesc">Text to Speech and Studio, priced per character.</div></div>
+          <span class="badge ok">Fully supported</span>
+        </div>
+        <div class="tool-item">
+          <svg class="check" width="22" height="22" viewBox="0 0 24 24" fill="none" style="color:var(--flag)"><circle cx="12" cy="12" r="9.5" stroke="currentColor" stroke-width="1.6"/><path d="M12 7.5v5.2M12 15.8v.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+          <div><div class="tname">Midjourney</div><div class="tdesc">Its web app hides per-generation cost — capture may be incomplete.</div></div>
+          <span class="badge exp">Experimental</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRIVACY -->
+  <section class="wrap">
+    <div class="privacy-card reveal">
+      <svg class="seal" width="72" height="72" viewBox="0 0 24 24" fill="none"><path d="M12 3l7.5 3.2v5.1c0 4.7-3.2 7.6-7.5 8.9-4.3-1.3-7.5-4.2-7.5-8.9V6.2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M9 12.2l2.2 2.2L15.2 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div>
+        <div class="sec-kick" style="margin-bottom:10px">Your data stays yours</div>
+        <h2 style="font-size:1.9rem">It never leaves your browser.</h2>
+        <p>PromptLedger reads prompt text and credit balances only from pages you already have open, and stores everything locally in your browser. Nothing is uploaded — the sole network request is a daily currency-rate fetch that carries no personal data. <a href="privacy.html">Read the privacy policy →</a></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="final wrap">
+    <div class="sec-kick" style="justify-content:center">Free · takes 20 seconds</div>
+    <h2>Stop guessing where your credits&nbsp;go.</h2>
+    <a class="btn-primary" href="https://chromewebstore.google.com/detail/cbciekapacldpgpkgclpfmdnhcljjbmi" target="_blank" rel="noopener">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.2" stroke="currentColor" stroke-width="1.6"/><path d="M12 7.5h8M8.2 9.6l3.8 6.6M15.8 9.6l-3.8 6.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      Add to Chrome — Free
+    </a>
+    <p class="fine">Works on Chrome · no sign-up · open source</p>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <span>© 2026 PromptLedger · a tool for people who bill for AI work</span>
+    <span class="links">
+      <a href="https://chromewebstore.google.com/detail/cbciekapacldpgpkgclpfmdnhcljjbmi" target="_blank" rel="noopener">Chrome Web Store</a>
+      <a href="https://github.com/aydinbattaglia/PromptLedger" target="_blank" rel="noopener">GitHub</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="mailto:aydin.battaglia@gmail.com">Contact</a>
+    </span>
+  </div>
+</footer>
+
+<script>
+  // Count up the total (progressive enhancement — static value already in the DOM).
+  (function () {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var el = document.getElementById('total');
+    if (!el) return;
+    var target = 0.70, start = null, dur = 1100;
+    el.textContent = '$0.00';
+    function tick(t) {
+      if (!start) start = t;
+      var p = Math.min((t - start) / dur, 1);
+      var eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = '$' + (target * eased).toFixed(2);
+      if (p < 1) requestAnimationFrame(tick);
+      else el.textContent = '$0.70';
+    }
+    setTimeout(function () { requestAnimationFrame(tick); }, 700);
+  })();
+
+  // Reveal-on-scroll.
+  (function () {
+    var els = document.querySelectorAll('.reveal');
+    if (!('IntersectionObserver' in window)) { els.forEach(function (e) { e.classList.add('in'); }); return; }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } });
+    }, { threshold: 0.15 });
+    els.forEach(function (e) { io.observe(e); });
+  })();
+</script>
+</body>
+</html>
